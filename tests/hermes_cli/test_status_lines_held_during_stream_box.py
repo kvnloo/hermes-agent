@@ -117,3 +117,31 @@ def test_unstreamed_final_reply_after_streamed_segment_still_prints_panel(cli_st
                            result={"completed": True, "final_response": "Final B"})
     cli._chat_print_response_panel(turn, "Final B")
     assert len(printed) == 1
+
+@pytest.mark.parametrize("modern", [False, True])
+def test_long_reasoning_bursts_batch_paints_without_losing_lines(monkeypatch, modern):
+    """Viaharo's #151097: a fast live reasoning stream must not queue one repaint per line."""
+    from cli import HermesCLI
+    import cli as climod
+    from hermes_cli import cli_stream_mixin
+
+    cli = HermesCLI.__new__(HermesCLI)
+    cli._modern_layout = modern
+    cli.show_reasoning = True
+    cli._reset_stream_state()
+    monkeypatch.setattr(HermesCLI, "_scrollback_box_width", lambda self: 80)
+    paints = []
+    monkeypatch.setattr(climod, "_cprint", paints.append)
+    clock = [1.0]
+    monkeypatch.setattr(cli_stream_mixin.time, "monotonic", lambda: clock[0])
+
+    lines = [f"reasoning-{index:03d}: " + "x" * 100 for index in range(300)]
+    for index, line in enumerate(lines):
+        clock[0] = 1.0 + index * 0.002
+        cli._stream_reasoning_delta(line + "\n")
+    assert any("reasoning-000" in paint for paint in paints)  # live, before completion
+    cli._close_reasoning_box()
+
+    painted = "\n".join(_plain(paint) for paint in paints if "reasoning-" in paint)
+    assert painted.splitlines() == lines  # no truncation, reorder, or lost buffered tail
+    assert len(paints) <= 24  # <=20 redraws in ~600ms, plus the box and footer

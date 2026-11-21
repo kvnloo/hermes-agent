@@ -25,6 +25,8 @@ from agent.think_scrubber import THINK_CLOSE_TAGS, THINK_OPEN_TAGS
 _OPEN_TAGS = THINK_OPEN_TAGS
 _CLOSE_TAGS = THINK_CLOSE_TAGS
 _MAX_CLOSE_TAG_LEN = max(len(t) for t in _CLOSE_TAGS)
+_REASONING_PAINT_INTERVAL = 0.05  # keep visible thinking live, not a redraw per token
+_REASONING_PAINT_MAX_BUFFER = 4096  # bound retained, not-yet-painted text during bursts
 
 # Ordered (prefix, catalog key) rows for _slow_command_status — first match wins; the key is
 # resolved through t() at call time so the active language applies.
@@ -257,11 +259,11 @@ class CLIStreamMixin:
             _cprint(closing_separator(True))
 
     def _stream_reasoning_delta(self, text: str) -> None:
-        """Stream reasoning tokens into a dim box above the response.
+        """Stream full live reasoning while bounding terminal paints during fast token bursts.
 
-        Opened on the first token, closed when content arrives (_emit_stream_text). Once the
-        response box is open further reasoning is suppressed — a late thinking block (e.g. after
-        an interrupt) would otherwise draw a reasoning box inside the response box.
+        A paint costs a prompt_toolkit erase/print/redraw cycle. Group consecutive
+        reasoning lines before scheduling that cycle; _close_reasoning_box flushes
+        any pending tail before the first answer or the turn-complete footer.
         """
         from cli import _DIM, _RST, _cprint
         if not text:
@@ -269,22 +271,15 @@ class CLIStreamMixin:
         self._reasoning_shown_this_turn = True
         if getattr(self, "_stream_box_opened", False):
             return
-        if getattr(self, "_modern_layout", False):
+
+        modern = getattr(self, "_modern_layout", False)
+        if modern:
             from hermes_cli.cli_modern_layout import reasoning_text_line, separator
             if not getattr(self, "_reasoning_box_opened", False):
                 self._reasoning_box_opened, self._reasoning_started_at = True, time.monotonic()
                 self._reasoning_buf = ""
                 _cprint("\n" + separator(False))
-            self._reasoning_buf = getattr(self, "_reasoning_buf", "") + text
-            # Live, as classic: complete lines now, long partial lines force-flushed.
-            while "\n" in self._reasoning_buf:
-                line, self._reasoning_buf = self._reasoning_buf.split("\n", 1)
-                _cprint(reasoning_text_line(line))
-            if len(self._reasoning_buf) > 80:
-                _cprint(reasoning_text_line(self._reasoning_buf))
-                self._reasoning_buf = ""
-            return
-        if not getattr(self, "_reasoning_box_opened", False):
+        elif not getattr(self, "_reasoning_box_opened", False):
             self._reasoning_box_opened = True
             w = self._scrollback_box_width()
             r_label = f" {t('cli.chat.reasoning_label')} "
@@ -292,14 +287,25 @@ class CLIStreamMixin:
             _cprint(f"\n{_DIM}┌─{r_label}{'─' * max(r_fill - 1, 0)}┐{_RST}")
 
         self._reasoning_buf = getattr(self, "_reasoning_buf", "") + text
-        # Emit complete lines; force-flush long partial lines so reasoning is visible in
-        # real-time even without newlines.
+        now = time.monotonic()
+        last_paint = getattr(self, "_reasoning_last_paint_at", None)
+        if (last_paint is not None and now - last_paint < _REASONING_PAINT_INTERVAL
+                and len(self._reasoning_buf) < _REASONING_PAINT_MAX_BUFFER):
+            return
+
+        lines = []
         while "\n" in self._reasoning_buf:
             line, self._reasoning_buf = self._reasoning_buf.split("\n", 1)
-            _cprint(f"{_DIM}{line}{_RST}")
+            lines.append(line)
         if len(self._reasoning_buf) > 80:
-            _cprint(f"{_DIM}{self._reasoning_buf}{_RST}")
+            lines.append(self._reasoning_buf)
             self._reasoning_buf = ""
+        if lines:
+            _cprint("\n".join(
+                reasoning_text_line(line) if modern else f"{_DIM}{line}{_RST}"
+                for line in lines
+            ))
+            self._reasoning_last_paint_at = now
 
     def _agent_status_print(self, *args, **kwargs) -> None:
         """``agent._print_fn`` for the interactive CLI: agent status lines (subagent completion ``✓ [set n · i/N]``,
@@ -333,6 +339,7 @@ class CLIStreamMixin:
             _cprint(thought_line(time.monotonic() - started if started else None))
             _cprint(closing_separator(False))
             self._reasoning_buf, self._reasoning_box_opened = "", False
+            self._reasoning_last_paint_at = None
             if not getattr(self, "_stream_box_live", False):
                 self._release_held_status_lines()
             return
@@ -343,6 +350,7 @@ class CLIStreamMixin:
         w = self._scrollback_box_width()
         _cprint(f"{_DIM}└{'─' * (w - 2)}┘{_RST}")
         self._reasoning_box_opened = False
+        self._reasoning_last_paint_at = None
         if not getattr(self, "_stream_box_live", False):
             self._release_held_status_lines()
 
@@ -585,6 +593,7 @@ class CLIStreamMixin:
         self._stream_last_was_newline = True
         self._reasoning_box_opened = False
         self._reasoning_buf = ""
+        self._reasoning_last_paint_at = None
         self._reasoning_preview_buf = ""
         # A batch cancelled/errored before any tool.started would otherwise mute the next turn's line.
         self.__dict__.pop("_tool_gen_announced", None)
