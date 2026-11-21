@@ -711,12 +711,31 @@ _CRON_CTX = _Unattended(
 )
 
 
+def _single_query_owner_reachable() -> bool:
+    """A single-query turn (``-q``, kanban worker) whose session can still reach the owner.
+
+    Under the tiered policy (``approvals.mode: smart``) a finite turn whose session registered
+    an approval notifier takes the interactive gate: the guardian approves routine work, and an
+    escalation parks in the session (the ``pre_approval_request`` hooks page the owner) until
+    answered or ``approvals.timeout``. Without a notifier nobody can answer, so the turn keeps
+    the deterministic ``approvals.single_query_mode`` path, and an explicit ``approve`` there
+    still wins."""
+    return (_is_single_query_approval_context()
+            and approval_context._get_approval_mode() == "smart"
+            and _SINGLE_QUERY_CTX.mode() == "deny"
+            and _gateway_notify_cb(get_current_session_key()) is not None)
+
+
+def _single_query_unanswerable() -> bool:
+    return _is_single_query_approval_context() and not _single_query_owner_reachable()
+
+
 def _unattended_contexts() -> list[_Unattended]:
     """Active unattended contexts in evaluation order: single-query first (``hermes chat -q``
     exports HERMES_INTERACTIVE=1 but nobody answers); cron beats a platform marker because
     cron binds the platform for delivery routing only."""
     contexts = []
-    if _is_single_query_approval_context():
+    if _single_query_unanswerable():
         contexts.append(_SINGLE_QUERY_CTX)
     if _is_cron_approval_context():
         contexts.append(_CRON_CTX)
@@ -1068,8 +1087,11 @@ def _presence(approval_callback=None) -> tuple:
     approval_callback = _resolve_cli_approval_callback(approval_callback)
     is_cli, is_gateway = _is_interactive_cli(), _is_gateway_approval_context()
     is_ask = env_var_enabled("HERMES_EXEC_ASK")
-    if _is_single_query_approval_context() or _is_cron_approval_context():
+    if _is_cron_approval_context() or _single_query_unanswerable():
         is_cli = is_gateway = is_ask = False
+    elif _is_single_query_approval_context():
+        # Owner reachable through the session notifier only: no CLI panel is watched.
+        is_cli, is_ask = False, True
     elif is_ask and _is_unattended_platform_approval_context() \
             and (_gateway_notify_cb(get_current_session_key()) is None
                  or _get_session_platform() in approval_context._NOTIFIER_BLIND_APPROVAL_PLATFORMS):
