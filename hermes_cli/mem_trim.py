@@ -205,9 +205,9 @@ def trim_memory(
             return False
 
 
-# A gateway that has been turn-free this long has nobody waiting on it, so the full collection the busy-path
-# trims skip can run here without freezing anyone. Python 3.14's incremental collector advances only on new
-# allocations, so a quiet process otherwise keeps closed agents' reference cycles (and their pages) forever.
+# Quiet gateways still need cycle collection: without allocations, automatic GC does not run.
+# On platforms without malloc_trim, avoid a full old-generation walk that can hold
+# the GIL for minutes on a swapped heap (#150518).
 IDLE_COLLECT_AFTER_SECONDS = 300.0
 _idle_collect_lock = threading.Lock()
 _idle_collected_for: float | None = None  # quiet-period stamp the last idle collection covered
@@ -221,8 +221,11 @@ def note_agent_closed() -> None:
 
 
 def trim_memory_when_idle(*, reason: str) -> bool:
-    """Timer-lane trim: allocator release only, plus ONE full collection per quiet period once no turn has run
-    in this process for ``IDLE_COLLECT_AFTER_SECONDS`` (again only after a later agent close)."""
+    """Timer-lane trim: allocator release plus one idle collection per quiet period.
+
+    On platforms without malloc_trim, limit that collection to generations 0-1 so
+    a huge old-generation heap cannot freeze the gateway during housekeeping.
+    """
     global _idle_collected_for, _agent_closed_since_idle_collect
     from agent.review_idle_queue import QUEUE
 
@@ -235,7 +238,8 @@ def trim_memory_when_idle(*, reason: str) -> bool:
     if not due or not _config_settings()[0]:
         return trim_memory(reason=reason, collect=False)
     started = time.perf_counter()
-    freed = gc.collect()
-    logger.info("idle full collection: reason=%s quiet_s=%d unreachable=%d duration_ms=%.1f",
-                reason, quiet_for, freed, (time.perf_counter() - started) * 1000)
+    generation = 2 if _probe_glibc_malloc_trim() is not None else 1
+    freed = gc.collect(generation)
+    logger.info("idle collection: reason=%s quiet_s=%d generation=%d unreachable=%d duration_ms=%.1f",
+                reason, quiet_for, generation, freed, (time.perf_counter() - started) * 1000)
     return trim_memory(force=True, reason=f"{reason} after idle collection", collect=False)
