@@ -129,7 +129,16 @@ def _scrub(text: str) -> str:
 
 def _op_child_env(token_value: str) -> dict[str, str]:
     source_env = get_source_environment()
-    env = {k: source_env[k] for k in _OP_ENV_ALLOWLIST if k in source_env}
+    if os.name == "nt":
+        # Staged plain-dict environments lose Windows' case-insensitive lookup.
+        folded = {key.upper(): key for key in source_env}
+        env = {}
+        for name in _OP_ENV_ALLOWLIST:
+            key = name if name in source_env else folded.get(name.upper())
+            if key is not None:
+                env[name] = source_env[key]
+    else:
+        env = {name: source_env[name] for name in _OP_ENV_ALLOWLIST if name in source_env}
     env.update((k, v) for k, v in source_env.items() if k.startswith("OP_SESSION_"))
     if token_value:
         env["OP_SERVICE_ACCOUNT_TOKEN"] = token_value
