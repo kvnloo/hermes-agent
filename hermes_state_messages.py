@@ -1886,6 +1886,13 @@ class SessionMessagesMixin(SessionDetachedResultsMixin, SessionTodoResultMixin, 
         sql = "SELECT COUNT(*) FROM messages" + (" WHERE session_id = ?" if session_id else "")
         return self._read_one(sql, (session_id,) if session_id else ())[0]
 
+    def get_compaction_summary_count(self, session_id: str) -> int:
+        """Committed compactions in the verified compression lineage, not uncommitted attempts."""
+        ids = self._resume_lineage_ids(session_id)
+        return int(self._read_one(
+            f"SELECT COUNT(*) FROM messages WHERE session_id IN ({_placeholders(ids)}) "
+            "AND _compressed_summary = 1", tuple(ids))[0])
+
     def has_gateway_input_owner(self, session_id: str, owner: str) -> bool:
         """Probe the accepted-input marker without allocating message bodies or archives."""
         return self._read_one(
