@@ -258,6 +258,34 @@ class TestIsGenuineNousRateLimit:
 
 
 
+    @pytest.mark.parametrize("with_reset", [False, True])
+    def test_partial_last_known_bucket_does_not_trip_breaker(self, with_reset):
+        from agent.nous_rate_guard import is_genuine_nous_rate_limit
+        from agent.rate_limit_tracker import parse_rate_limit_headers
+
+        headers = {"x-ratelimit-limit-requests-1h": "800"}
+        if with_reset:
+            headers["x-ratelimit-reset-requests-1h"] = "3100"
+        state = parse_rate_limit_headers(headers, provider="nous")
+        assert state is not None and not state.has_data
+        assert not is_genuine_nous_rate_limit(headers={}, last_known_state=state)
+
+    def test_actual_exhaustion_in_last_known_bucket_still_trips_breaker(self):
+        from agent.nous_rate_guard import is_genuine_nous_rate_limit
+        from agent.rate_limit_tracker import parse_rate_limit_headers
+
+        state = parse_rate_limit_headers(
+            {
+                "x-ratelimit-limit-requests-1h": "800",
+                "x-ratelimit-remaining-requests-1h": "0",
+                "x-ratelimit-reset-requests-1h": "3100",
+            },
+            provider="nous",
+        )
+        assert state is not None and state.has_data
+        assert is_genuine_nous_rate_limit(headers={}, last_known_state=state)
+
+
 class TestWelcomeRouteCopy:
     @staticmethod
     def _drive_guard(base_url, monkeypatch):
