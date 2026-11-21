@@ -447,7 +447,7 @@ def _merge_mcp_into_per_job_toolsets(per_job: list[str], cfg: dict) -> list[str]
     if "no_mcp" in per_job:
         return result
     # lazy: avoid heavy hermes_cli import at module load; shares MCP-membership with gateway/CLI
-    from hermes_cli.tools_config import enabled_mcp_server_names
+    from hermes_cli.tools_config import enabled_mcp_server_names, mcp_server_toolset_key
     enabled_mcp = enabled_mcp_server_names(cfg)
     # A job names an MCP server by its TOOLSET name (``mcp-<server>``) or by the bare alias the
     # registry registers for it; compare against BOTH, or a job that named one server never matched
@@ -457,11 +457,13 @@ def _merge_mcp_into_per_job_toolsets(per_job: list[str], cfg: dict) -> list[str]
     # interactive resolver follows (hermes_cli.tools_config._merge_mcp_servers).
     configured = cfg.get("mcp_servers") if isinstance(cfg.get("mcp_servers"), dict) else {}
     known = enabled_mcp | {str(name) for name in configured}
-    if set(result) & (known | {f"mcp-{name}" for name in known}):
-        return result
-    for name in sorted(enabled_mcp):
-        if name not in result:
-            result.append(name)
+    listed = set(result) & (known | {f"mcp-{name}" for name in known})
+    selected = ({name for name in enabled_mcp if name in listed or f"mcp-{name}" in listed}
+                if listed else enabled_mcp)
+    for name in sorted(selected):
+        key = mcp_server_toolset_key(name)
+        if key not in result and f"mcp-{name}" not in result:
+            result.append(key)
     return result
 
 
