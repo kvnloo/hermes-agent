@@ -1,4 +1,5 @@
 """Private local creation receipts in the canonical runtime transaction owner."""
+import hashlib
 import json
 import threading
 import time
@@ -9,6 +10,36 @@ from hermes_state_runtime import RuntimeStoreError, _epoch, _json
 POLICY_PREFIX = 'gateway.local_policy.v1:'
 API_BINDING_PREFIX = 'gateway.api.binding.v1.'
 API_DECLARED_PREFIX = 'gateway.api.conversation.v1.'
+CONFIG_PREFIX = 'gateway.config.v1:'
+CONFIG_REF = 'sha256:'
+
+
+def _stored_receipt(conn, receipt):
+    """Share identical frozen configs; keep the receipt transaction as their only writer."""
+    config = receipt['policy']['config_json']
+    if isinstance(config, str) and not config.startswith(CONFIG_REF):
+        digest = hashlib.sha256(config.encode('utf-8')).hexdigest()
+        conn.execute('INSERT OR IGNORE INTO state_meta(key,value) VALUES(?,?)',
+                     (CONFIG_PREFIX + digest, config))
+        receipt = {**receipt, 'policy': {**receipt['policy'], 'config_json': CONFIG_REF + digest}}
+    return _json(receipt)
+
+
+def _resolved_receipt(conn, raw):
+    """Present legacy inline and referenced receipts identically to all policy consumers."""
+    receipt = json.loads(raw)
+    policy = receipt.get('policy') if isinstance(receipt, dict) else None
+    config = policy.get('config_json') if isinstance(policy, dict) else None
+    if not isinstance(config, str) or not config.startswith(CONFIG_REF):
+        return receipt
+    digest = config[len(CONFIG_REF):]
+    if len(digest) != 64 or any(c not in '0123456789abcdef' for c in digest):
+        raise RuntimeStoreError('storage_unavailable')
+    row = conn.execute('SELECT value FROM state_meta WHERE key=?', (CONFIG_PREFIX + digest,)).fetchone()
+    if row is None or hashlib.sha256(row[0].encode('utf-8')).hexdigest() != digest:
+        raise RuntimeStoreError('storage_unavailable')
+    return {**receipt, 'policy': {**policy, 'config_json': row[0]}}
+
 
 
 def commit_local_session(db, *, epoch, receipt):
@@ -33,7 +64,7 @@ def commit_local_session(db, *, epoch, receipt):
         old = conn.execute('SELECT value FROM state_meta WHERE key=?', (key,)).fetchone()
         if old is not None:
             try:
-                saved = json.loads(old[0])
+                saved = _resolved_receipt(conn, old[0])
                 same = all(saved[k] == receipt[k] for k in (
                     'profile_id', 'principal_id', 'request_id', 'session_id', 'route'))
                 same = same and same_create_retry(saved['policy'], receipt['policy']['request_json'], request)
@@ -74,7 +105,7 @@ def commit_local_session(db, *, epoch, receipt):
              _json(entry['origin']), started))
         conn.execute("INSERT INTO gateway_routing(scope,session_key,entry_json,updated_at) VALUES('',?,?,?)",
                      (route, _json(entry), started))
-        conn.execute('INSERT INTO state_meta(key,value) VALUES(?,?)', (key, encoded))
+        conn.execute('INSERT INTO state_meta(key,value) VALUES(?,?)', (key, _stored_receipt(conn, receipt)))
         if on_create is not None:
             on_create.publish()  # before the row is visible, so no reader lazy-loads around it
         return receipt
@@ -390,15 +421,15 @@ def annotate_local_lineages(sessions, heads):
 def local_receipt(db, session_id):
     with db._read_ctx() as conn:
         row = conn.execute('SELECT value FROM state_meta WHERE key=?', (POLICY_PREFIX + session_id,)).fetchone()
-    if row is None:
-        raise RuntimeStoreError('storage_unavailable')
-    try:
-        value = json.loads(row[0])
-        if not isinstance(value, dict):
-            raise ValueError('invalid receipt')
-        return value
-    except (TypeError, ValueError) as exc:
-        raise RuntimeStoreError('storage_unavailable') from exc
+        if row is None:
+            raise RuntimeStoreError('storage_unavailable')
+        try:
+            value = _resolved_receipt(conn, row[0])
+            if not isinstance(value, dict):
+                raise ValueError('invalid receipt')
+            return value
+        except (TypeError, ValueError) as exc:
+            raise RuntimeStoreError('storage_unavailable') from exc
 
 
 def end_idle_local_session(db, *, epoch, session_id, target_id, reason):
