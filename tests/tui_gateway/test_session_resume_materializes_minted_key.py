@@ -1,18 +1,9 @@
-"""``session.resume`` materializes a row for a minted-but-never-persisted key.
+"""Minted session key recovery (#96793) without empty reconnect rows (#150338).
 
-Bug class: the backend dies between ``session.create`` (which intentionally
-writes no state.db row until the first prompt — no "Untitled" litter) and that
-first ``prompt.submit``. The stored key exists client-side (pinned tile,
-sidebar) but has no row anywhere, and after a restart the in-memory live-lazy
-lookup can't find it either — so resume used to 4007 forever and the desktop
-surfaced "no route to the backend holding this session".
-
-The fix: when the resume target is a well-formed server-minted key
-(``%Y%m%d_%H%M%S_`` + 6 hex, the exact shape ``_new_session_key()`` produces),
-materialize the row and continue the normal empty resume instead of failing.
-Abandoned drafts still leave no row — nothing is written until a client
-explicitly resumes the exact key. Fail-closed: garbage, 8-hex runtime ids,
-and titles still 4007, and lazy subagent watch windows are excluded.
+#96793 (original fix by ruangraung) made an unpersisted key resumable across a
+gateway restart. Reporter kosmo888 showed that reattaching several abandoned
+keys then left permanent zero-message Untitled rows. Keep recovery in memory
+until the first prompt; other stored-key and fail-closed behaviors still apply.
 """
 
 from __future__ import annotations
@@ -58,21 +49,34 @@ def _assert_resumed_ok(resp, target):
     assert resp["result"]["session_id"], "a live runtime must be registered"
 
 
-def test_resume_materializes_row_for_minted_key(real_db):
-    """The core fix: a minted-but-never-persisted key resumes, row now exists."""
+def test_resume_defers_minted_draft_until_first_prompt(real_db):
+    """Crash recovery succeeds without a row until the first-prompt write hook."""
     resp = _resume(session_id=MINTED_KEY)
 
     _assert_resumed_ok(resp, MINTED_KEY)
+    assert real_db.get_session(MINTED_KEY) is None
+    live = server._sessions[resp["result"]["session_id"]]
+    assert live["session_key"] == MINTED_KEY
+    assert live["history"] == []
+    assert server._ensure_session_db_row(live) is not False
     row = real_db.get_session(MINTED_KEY)
-    assert row is not None, "resume must materialize the DB row"
+    assert row is not None
     assert row["source"] == "tui"
-    assert row["model"] == "test-model"
-    # Materialization stamps the launch profile explicitly (the #99222 contract
-    # _ensure_session_db_row applies on first-prompt persistence: profile_name_for_home
-    # or _current_profile_name, never NULL). A bare create_session leaves NULL, so the
-    # oracle is the production expression itself, not a bare insert.
-    assert row.get("profile_name") == (
-        server.profile_name_for_home(None) or server._current_profile_name())
+
+
+def test_reconnect_batch_keeps_unspoken_drafts_unpersisted(real_db):
+    """A reconnect replay of three abandoned gui keys must not add Untitled rows."""
+    keys = [MINTED_KEY, "20261107_051206_669822", "20261107_051240_9543e2"]
+    responses = [_resume(session_id=key, source="gui") for key in keys]
+    for key, resp in zip(keys, responses):
+        _assert_resumed_ok(resp, key)
+        assert server._sessions[resp["result"]["session_id"]]["session_key"] == key
+        assert real_db.get_session(key) is None
+    assert real_db.list_sessions_rich(source=None) == []
+    repeated = _resume(session_id=keys[0], source="gui")
+    _assert_resumed_ok(repeated, keys[0])
+    assert repeated["result"]["session_id"] == responses[0]["result"]["session_id"]
+    assert real_db.list_sessions_rich(source=None) == []
 
 
 def test_resume_existing_row_unaffected(real_db):
