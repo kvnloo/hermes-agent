@@ -418,6 +418,17 @@ def _preview_read_file(args: dict, max_len: int) -> str | None:
     return None if label is None else _tail_trunc(f"{label} {_read_file_line_label(args)}".strip(), max_len) or None
 
 
+def _preview_edit_file(args: dict, max_len: int) -> str | None:
+    """Show the filename before a long parent path so file edits stay distinguishable."""
+    path = args.get("path")
+    if path is None:
+        return None
+    normalized = _oneline(str(path).replace("\\", "/"))
+    parent, separator, basename = normalized.rpartition("/")
+    preview = f"{basename} ({parent})" if separator and basename and parent else normalized
+    return _tail_trunc(preview, max_len) or None
+
+
 def _memory_first_op(args: dict) -> tuple[dict, str]:
     """The op a memory progress line shows and a ``" (N more)"`` suffix for the rest of an
     ``operations[]`` batch (the advertised shape); legacy top-level single-op args are their own op."""
@@ -475,7 +486,8 @@ _PREVIEW_BUILDERS = {
     "browser_exec": _preview_browser_exec, "delegate_task": _preview_delegate_task,
     "process_manage": _preview_process_manage, "todo_list": _preview_todo_list,
     "terminal": _preview_shell("command"), "execute_code": _preview_shell("code"),
-    "read_file": _preview_read_file, "memory": _preview_memory, "send_message": _preview_send_message,
+    "read_file": _preview_read_file, "write_file": _preview_edit_file, "patch": _preview_edit_file,
+    "memory": _preview_memory, "send_message": _preview_send_message,
     "skill_view": _preview_skill_view, "clarify": _preview_clarify,
     "session_search": lambda args, _m: t("display.preview.session_search_recall", query=_clip(_oneline(args.get("query", "")), 25)),
     "tool_call": _preview_bridge_call("tool_call"),
