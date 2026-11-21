@@ -190,7 +190,12 @@ class _Runner:
             return
         meta = self.installer.skill_meta(target.name)
         if not meta:
-            raise LookupError(f"'{target.name}' was not found in the skills hub")
+            raise LookupError(
+                f"Could not resolve skill '{target.name}' for installation. If this id came from "
+                "catalog search, the listing may be stale (skill moved or removed upstream), or "
+                "the hub may be temporarily unavailable. Search again or install from the skill's "
+                "current GitHub folder URL."
+            )
         self.facts[target.name] = meta
         target.extra = {
             "display": str(meta.get("name") or _display(target.name)),
