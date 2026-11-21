@@ -365,6 +365,46 @@ class TestPrompt:
         assert resp.stop_reason == "refusal"
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize("agent_raises", [False, True])
+    async def test_failed_turn_streams_error_and_rejects_acp_prompt(
+        self, agent, mock_manager, agent_raises
+    ):
+        """A failed model turn must not look successful to ACP editors (goose#13043)."""
+        resp = await agent.new_session(cwd=".")
+        state = mock_manager.get_session(resp.session_id)
+        state.agent.model, state.agent.provider = "test-model", "openrouter"
+
+        def _failed_turn(*args, **kwargs):
+            if agent_raises:
+                raise RuntimeError("provider offline")
+            return {
+                "final_response": "Error: provider offline",
+                "messages": [{"role": "user", "content": "hi"}],
+                "completed": False,
+                "failed": True,
+            }
+
+        state.agent.run_conversation = _failed_turn
+        conn = MagicMock(spec=acp.Client)
+        conn.session_update = AsyncMock()
+        agent._conn = conn
+
+        with pytest.raises(acp.RequestError, match="Hermes turn failed"):
+            await agent.prompt(
+                prompt=[TextContentBlock(type="text", text="hi")],
+                session_id=resp.session_id,
+            )
+
+        updates = [call.kwargs["update"] for call in conn.session_update.await_args_list]
+        assert any(
+            getattr(update, "session_update", None) == "agent_message_chunk"
+            and getattr(getattr(update, "content", None), "text", None) == "Error: provider offline"
+            for update in updates
+        )
+        assert state.is_running is False
+        assert state.current_prompt_text == ""
+
+    @pytest.mark.asyncio
     async def test_prompt_binds_session_id_into_subprocess_env(self, agent, mock_manager):
         """The ACP prompt path must bridge the session id into child subprocesses.
 
