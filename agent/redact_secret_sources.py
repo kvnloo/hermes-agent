@@ -15,6 +15,7 @@ evicted while it is still applied. Memory only: never persisted or logged.
 from __future__ import annotations
 
 import json
+import os
 import re
 import threading
 from pathlib import Path
@@ -145,13 +146,64 @@ def _registered(key: str) -> tuple[str, ...]:
     return entry
 
 
+# Secret-named variables of the active environment, scrubbed by value too: a skill's
+# ``required_environment_variables`` prompt, a hand-edited ``.env`` line or a shell export never goes
+# through a secret source, so without this its value reached the model whenever the output format
+# slipped past the ``KEY=value`` pattern pass (a ``swift build`` error printing ``'NAME=value'``).
+# name -> secret-named, memoised: the name set is stable, and the scrub runs per log record.
+_SECRET_NAMED: dict[str, bool] = {}
+_ENV_FORMS: tuple[frozenset, tuple[str, ...]] = (frozenset(), ())
+
+
+def _is_secret_named(name: str) -> bool:
+    named = _SECRET_NAMED.get(name)
+    if named is None:
+        from agent.redact import _key_has_secret_keyword
+
+        named = _SECRET_NAMED[name] = _key_has_secret_keyword(name)
+    return named
+
+
+def _secret_named_env() -> frozenset[tuple[str, str]]:
+    """``(name, value)`` of the secret-named variables in the active profile's environment: its
+    secret scope, over ``os.environ`` only while the process's own profile is active
+    (``os.environ`` holds the launch profile's values, which a routed or overridden profile must
+    not see, or have confirmed by a mask)."""
+    from agent.redact import _has_password_keyword
+    from agent.secret_scope import current_secret_scope, serves_routed_profile
+    from hermes_constants import get_hermes_home_override
+
+    scope = current_secret_scope()
+    foreign = get_hermes_home_override() is not None or (scope is not None and serves_routed_profile())
+    # Names first: reading every value of os.environ is most of this scrub's cost per log record.
+    env = {} if foreign else {name: os.environ.get(name) for name in os.environ if _is_secret_named(name)}
+    env.update((name, value) for name, value in (scope or {}).items() if _is_secret_named(name))
+    # An absolute path under a secret-ish name (``SSH_AUTH_SOCK``) is a location, not the credential.
+    return frozenset((name, value) for name, value in env.items() if isinstance(value, str)
+                     and (_has_password_keyword(name) or not os.path.isabs(value)))
+
+
+def _env_secret_forms() -> tuple[str, ...]:
+    global _ENV_FORMS
+    named = _secret_named_env()
+    key, forms = _ENV_FORMS
+    if named != key:
+        forms = _exact_forms(dict(named))
+        _ENV_FORMS = (named, forms)
+    return forms
+
+
 def redact_secret_source_values(text: str) -> str:
-    """Exact-substring scrub of the current profile's applied secret-source values."""
-    if not _VALUES_BY_HOME or not isinstance(text, str) or not text:
+    """Exact-substring scrub of the current profile's applied secret-source values and of the
+    secret-named values in its environment."""
+    if not isinstance(text, str) or not text:
         return text
     from hermes_constants import hermes_home_key
 
-    for value in _registered(hermes_home_key()):
+    forms = _env_secret_forms()
+    if _VALUES_BY_HOME:  # longest first across both sets, so no value shadows its superstring
+        forms = sorted({*_registered(hermes_home_key()), *forms}, key=len, reverse=True)
+    for value in forms:
         if value in text:
             text = text.replace(value, REDACTED_SECRET_SOURCE_VALUE)
     return text
