@@ -83,6 +83,68 @@ describe('scanDiskPlugins (#66899)', () => {
     expect(readDir).not.toHaveBeenCalled()
   })
 
+  it('loads the live plugin without reading a timestamped backup sibling (#150919)', async () => {
+    const root = '/local/.hermes/desktop-plugins'
+    const backup = `${root}/omh.bak.20261107072053`
+    desktopPluginsRoot.mockResolvedValue(root)
+    readDir.mockImplementation(async dir => {
+      if (dir === root) {
+        return {
+          entries: ['omh', 'omh.bak.20261107072053'].map(name => ({
+            isDirectory: true,
+            name,
+            path: `${root}/${name}`
+          }))
+        }
+      }
+
+      if (dir === `${root}/omh` || dir === backup) {
+        return { entries: [{ isDirectory: false, name: 'plugin.js', path: `${dir}/plugin.js` }] }
+      }
+
+      return { entries: [] }
+    })
+    const register = vi.fn()
+    ;(globalThis as unknown as { __omhRegister: unknown }).__omhRegister = register
+    readFileText.mockResolvedValue({ text: 'export default { id: "omh", register: globalThis.__omhRegister }' })
+    watchPreviewFile.mockResolvedValue({ id: 'w-omh' })
+
+    const createObjectURL = vi
+      .spyOn(URL, 'createObjectURL')
+      .mockImplementation(
+        blob =>
+          `data:text/javascript;base64,${Buffer.from((blob as unknown as { parts: string[] }).parts.join('')).toString('base64')}`
+      )
+    const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined)
+    const RealBlob = globalThis.Blob
+    vi.stubGlobal(
+      'Blob',
+      class {
+        parts: string[]
+        constructor(parts: string[]) {
+          this.parts = parts
+        }
+      }
+    )
+
+    try {
+      await discoverRuntimePlugins()
+
+      expect(register).toHaveBeenCalledTimes(1)
+      expect($pluginRecords.get().omh).toMatchObject({ status: 'loaded', file: `${root}/omh/plugin.js` })
+      expect(readDir).not.toHaveBeenCalledWith(backup)
+      expect(readFileText).not.toHaveBeenCalledWith(`${backup}/plugin.js`)
+      expect($pluginRecords.get()['omh.bak.20261107072053']).toBeUndefined()
+    } finally {
+      readDir.mockResolvedValue({ entries: [] })
+      await discoverRuntimePlugins()
+      createObjectURL.mockRestore()
+      revokeObjectURL.mockRestore()
+      vi.stubGlobal('Blob', RealBlob)
+      delete (globalThis as unknown as { __omhRegister?: unknown }).__omhRegister
+    }
+  })
+
   it('treats a folder without plugin.js as metadata, not a throwing file read', async () => {
     desktopPluginsRoot.mockResolvedValue('/local/.hermes/desktop-plugins')
     readDir.mockImplementation(async dir => {
