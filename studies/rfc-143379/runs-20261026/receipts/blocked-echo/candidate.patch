@@ -1,0 +1,55 @@
+diff --git i/tools/memory_tool_store.py w/tools/memory_tool_store.py
+index 03e84ff1b8..572e6c7283 100644
+--- i/tools/memory_tool_store.py
++++ w/tools/memory_tool_store.py
+@@ -109,6 +109,18 @@ def _find_unique_match(entries: list[str], old_text: str) -> tuple[Optional[int]
+     return (matches[0] if matches else None), False
+ 
+ 
++def _echo_safe(entries):
++    """Entries echoed to the model in an error response, with threat hits replaced by the
++    same kind of [BLOCKED] marker the prompt snapshot uses (RFC #143379 study candidate)."""
++    from tools.threat_patterns import scan_for_threats
++    out = []
++    for entry in entries:
++        findings = scan_for_threats(entry, scope="strict") if entry and not entry.startswith("[BLOCKED:") else None
++        out.append(entry if not findings else
++                   f"[BLOCKED: entry contained threat pattern(s): {', '.join(findings)}. Text withheld.]")
++    return out
++
++
+ def _no_match_error(entries: list[str], old_text: str, verb: str, **extra) -> dict[str, Any]:
+     """Zero-match error that names the fix: the entries sharing the most words with
+     *old_text* (a paraphrased or stale old_text usually still shares most of them), and a
+@@ -118,7 +130,7 @@ def _no_match_error(entries: list[str], old_text: str, verb: str, **extra) -> di
+     words = _words(old_text)
+     scored = sorted(((len(words & _words(e)) / len(words), i) for i, e in enumerate(entries)) if words else [],
+                     key=lambda p: (-p[0], p[1]))
+-    closest = [entries[i] for score, i in scored[:3] if score >= 0.3]
++    closest = _echo_safe([entries[i] for score, i in scored[:3] if score >= 0.3])
+     hint = (" old_text must come from ONE entry ('§' separates entries); use one op per entry."
+             if "§" in old_text else "")
+     return _error(f"No entry matched '{old_text}'.{hint} Retry the {verb} with old_text copied verbatim "
+@@ -324,7 +336,7 @@ class MemoryStore:
+     def _failure_with_entries(self, target: str, message: str) -> dict[str, Any]:
+         """Over-budget consolidation failure carrying the live entries so the model can consolidate."""
+         return self._consolidation_failure(
+-            _error(message, "over_budget", current_entries=self._entries_for(target), usage=self._usage(target)))
++            _error(message, "over_budget", current_entries=_echo_safe(self._entries_for(target)), usage=self._usage(target)))
+ 
+     def _add_overflow(self, target: str, content: str, limit: int) -> dict[str, Any]:
+         """A lone add over budget, legacy or one-item batch: the model has not consolidated yet,
+@@ -478,10 +490,10 @@ class MemoryStore:
+         idx, ambiguous = _find_unique_match(entries, old_text)
+         if ambiguous:
+             return _error(f"Multiple entries matched '{old_text}'. Be more specific.", "ambiguous",
+-                          matches=[entries[i][:80] + ("..." if len(entries[i]) > 80 else "")
+-                                   for i in _substring_matches(entries, old_text)])
++                          matches=[e[:80] + ("..." if len(e) > 80 else "")
++                                   for e in _echo_safe([entries[i] for i in _substring_matches(entries, old_text)])])
+         if idx is None:
+-            return self._consolidation_failure(_no_match_error(entries, old_text, verb, current_entries=entries))
++            return self._consolidation_failure(_no_match_error(entries, old_text, verb, current_entries=_echo_safe(entries)))
+         return idx
+ 
+     def resolve_entry(self, target: str, old_text: str, verb: str) -> dict[str, Any]:

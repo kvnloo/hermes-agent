@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="1.993" timestamp="2026-10-26T07:05:35.451314+00:00" hostname="lab-host"><testcase classname="tests.tools.test_rfc_homework" name="test_chain_doc_read_response_budget_candidate" time="1.532"><failure message="AssertionError: unbounded read response; 4 KiB is only a proposed exploratory budget&#10;assert 131186 &lt;= 4096&#10; +  where 131186 = len(b'{&quot;success&quot;: true, &quot;target&quot;: &quot;doc:large-notes&quot;, &quot;entries&quot;: [&quot;XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX...XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX&quot;], &quot;usage&quot;: &quot;131,072 chars (chain doc \xe2\x80\x94 uncapped)&quot;}')&#10; +    where b'{&quot;success&quot;: true, &quot;target&quot;: &quot;doc:large-notes&quot;, &quot;entries&quot;: [&quot;XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX...XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX&quot;], &quot;usage&quot;: &quot;131,072 chars (chain doc \xe2\x80\x94 uncapped)&quot;}' = &lt;built-in method encode of str object at 0x11cbf9b0&gt;('utf-8')&#10; +      where &lt;built-in method encode of str object at 0x11cbf9b0&gt; = '{&quot;success&quot;: true, &quot;target&quot;: &quot;doc:large-notes&quot;, &quot;entries&quot;: [&quot;XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX...XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX&quot;], &quot;usage&quot;: &quot;131,072 chars (chain doc — uncapped)&quot;}'.encode&#10; +        where '{&quot;success&quot;: true, &quot;target&quot;: &quot;doc:large-notes&quot;, &quot;entries&quot;: [&quot;XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX...XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX&quot;], &quot;usage&quot;: &quot;131,072 chars (chain doc — uncapped)&quot;}' = &lt;function dumps at 0x7f6c9d7e9f30&gt;({'success': True, 'target': 'doc:large-notes', 'entries': ['XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX...XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'], 'usage': '131,072 chars (chain doc — uncapped)'}, ensure_ascii=False)&#10; +          where &lt;function dumps at 0x7f6c9d7e9f30&gt; = json.dumps">memory_env = (&lt;tools.memory_tool_store.MemoryStore object at 0x7f6c99313620&gt;, PosixPath('/var/tmp/hermes-pytest-1000/r-dhdzqrpp/pytest-of-kvn/pytest-0/test_chain_doc_read_response_b0'))
+
+    def test_chain_doc_read_response_budget_candidate(memory_env):
+        """Candidate 4 KiB response contract, NOT a currently accepted Hermes spec.
+    
+        This probes the cost of an uncapped doc + unbounded response; failing it
+        establishes a *policy decision* for maintainers, not necessarily a bug.
+        """
+        store, _ = memory_env
+        if not hasattr(store, "_doc") or not hasattr(store, "read"):
+            pytest.skip("No chain-doc read on this head")
+        assert store.add("memory", "Pointer @doc:large-notes")["success"]
+        assert store.add("doc:large-notes", "X" * 131072)["success"]
+        response = store.read("doc:large-notes")
+        assert response["success"]
+&gt;       assert len(json.dumps(response, ensure_ascii=False).encode("utf-8")) &lt;= 4096, (
+            "unbounded read response; 4 KiB is only a proposed exploratory budget"
+        )
+E       AssertionError: unbounded read response; 4 KiB is only a proposed exploratory budget
+E       assert 131186 &lt;= 4096
+E        +  where 131186 = len(b'{"success": true, "target": "doc:large-notes", "entries": ["XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX...XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"], "usage": "131,072 chars (chain doc \xe2\x80\x94 uncapped)"}')
+E        +    where b'{"success": true, "target": "doc:large-notes", "entries": ["XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX...XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"], "usage": "131,072 chars (chain doc \xe2\x80\x94 uncapped)"}' = &lt;built-in method encode of str object at 0x11cbf9b0&gt;('utf-8')
+E        +      where &lt;built-in method encode of str object at 0x11cbf9b0&gt; = '{"success": true, "target": "doc:large-notes", "entries": ["XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX...XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"], "usage": "131,072 chars (chain doc — uncapped)"}'.encode
+E        +        where '{"success": true, "target": "doc:large-notes", "entries": ["XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX...XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"], "usage": "131,072 chars (chain doc — uncapped)"}' = &lt;function dumps at 0x7f6c9d7e9f30&gt;({'success': True, 'target': 'doc:large-notes', 'entries': ['XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX...XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'], 'usage': '131,072 chars (chain doc — uncapped)'}, ensure_ascii=False)
+E        +          where &lt;function dumps at 0x7f6c9d7e9f30&gt; = json.dumps
+
+tests/tools/test_rfc_homework.py:140: AssertionError</failure></testcase></testsuite></testsuites>

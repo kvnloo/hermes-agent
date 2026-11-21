@@ -1,0 +1,247 @@
+{
+ "seed": 143379,
+ "Q1_consistent_n_first20": [
+  114,
+  115,
+  197,
+  198,
+  228,
+  229,
+  230,
+  261,
+  280,
+  293,
+  311,
+  312,
+  313,
+  314,
+  342,
+  343,
+  344,
+  345,
+  363,
+  374
+ ],
+ "Q1_smallest_n": 114,
+ "Q2_null_noise": [
+  {
+   "n_per_arm": 114,
+   "null_sd_pp": 3.56,
+   "P_abs_delta_ge_3.5pp": 0.381,
+   "median_range_5_reruns_pp": 7.9,
+   "P_range5_ge_19.4pp": 0.001
+  },
+  {
+   "n_per_arm": 80,
+   "null_sd_pp": 4.25,
+   "P_abs_delta_ge_3.5pp": 0.452,
+   "median_range_5_reruns_pp": 10.0,
+   "P_range5_ge_19.4pp": 0.013
+  },
+  {
+   "n_per_arm": 114,
+   "null_sd_pp": 3.56,
+   "P_abs_delta_ge_3.5pp": 0.392,
+   "median_range_5_reruns_pp": 7.9,
+   "P_range5_ge_19.4pp": 0.0
+  },
+  {
+   "n_per_arm": 200,
+   "null_sd_pp": 2.69,
+   "P_abs_delta_ge_3.5pp": 0.218,
+   "median_range_5_reruns_pp": 6.0,
+   "P_range5_ge_19.4pp": 0.0
+  },
+  {
+   "n_per_arm": 500,
+   "null_sd_pp": 1.7,
+   "P_abs_delta_ge_3.5pp": 0.04,
+   "median_range_5_reruns_pp": 3.8,
+   "P_range5_ge_19.4pp": 0.0
+  }
+ ],
+ "Q3_gate_as_written": [
+  {
+   "n_per_point": 80,
+   "points": 1,
+   "true_delta_pp": 0.0,
+   "paired_rho": 0.5,
+   "P_gate_FAIL": 0.397
+  },
+  {
+   "n_per_point": 80,
+   "points": 1,
+   "true_delta_pp": 1.1,
+   "paired_rho": 0.5,
+   "P_gate_FAIL": 0.3
+  },
+  {
+   "n_per_point": 80,
+   "points": 5,
+   "true_delta_pp": 0.0,
+   "paired_rho": 0.5,
+   "P_gate_FAIL": 0.929
+  },
+  {
+   "n_per_point": 80,
+   "points": 5,
+   "true_delta_pp": 1.1,
+   "paired_rho": 0.5,
+   "P_gate_FAIL": 0.835
+  },
+  {
+   "n_per_point": 80,
+   "points": 18,
+   "true_delta_pp": 0.0,
+   "paired_rho": 0.5,
+   "P_gate_FAIL": 1.0
+  },
+  {
+   "n_per_point": 80,
+   "points": 18,
+   "true_delta_pp": 1.1,
+   "paired_rho": 0.5,
+   "P_gate_FAIL": 1.0
+  },
+  {
+   "n_per_point": 300,
+   "points": 1,
+   "true_delta_pp": 0.0,
+   "paired_rho": 0.5,
+   "P_gate_FAIL": 0.466
+  },
+  {
+   "n_per_point": 300,
+   "points": 1,
+   "true_delta_pp": 1.1,
+   "paired_rho": 0.5,
+   "P_gate_FAIL": 0.22
+  },
+  {
+   "n_per_point": 300,
+   "points": 5,
+   "true_delta_pp": 0.0,
+   "paired_rho": 0.5,
+   "P_gate_FAIL": 0.95
+  },
+  {
+   "n_per_point": 300,
+   "points": 5,
+   "true_delta_pp": 1.1,
+   "paired_rho": 0.5,
+   "P_gate_FAIL": 0.714
+  },
+  {
+   "n_per_point": 300,
+   "points": 18,
+   "true_delta_pp": 0.0,
+   "paired_rho": 0.5,
+   "P_gate_FAIL": 1.0
+  },
+  {
+   "n_per_point": 300,
+   "points": 18,
+   "true_delta_pp": 1.1,
+   "paired_rho": 0.5,
+   "P_gate_FAIL": 0.987
+  },
+  {
+   "n_per_point": 1000,
+   "points": 1,
+   "true_delta_pp": 0.0,
+   "paired_rho": 0.5,
+   "P_gate_FAIL": 0.46
+  },
+  {
+   "n_per_point": 1000,
+   "points": 1,
+   "true_delta_pp": 1.1,
+   "paired_rho": 0.5,
+   "P_gate_FAIL": 0.105
+  },
+  {
+   "n_per_point": 1000,
+   "points": 5,
+   "true_delta_pp": 0.0,
+   "paired_rho": 0.5,
+   "P_gate_FAIL": 0.957
+  },
+  {
+   "n_per_point": 1000,
+   "points": 5,
+   "true_delta_pp": 1.1,
+   "paired_rho": 0.5,
+   "P_gate_FAIL": 0.45
+  },
+  {
+   "n_per_point": 1000,
+   "points": 18,
+   "true_delta_pp": 0.0,
+   "paired_rho": 0.5,
+   "P_gate_FAIL": 1.0
+  },
+  {
+   "n_per_point": 1000,
+   "points": 18,
+   "true_delta_pp": 1.1,
+   "paired_rho": 0.5,
+   "P_gate_FAIL": 0.857
+  }
+ ],
+ "Q4_paired_noninferiority": [
+  {
+   "eps_pp": 2.0,
+   "discordant_rate": 0.06,
+   "n_pairs_per_bin_90pct_power": 1285,
+   "bins18_total_pairs": 23130
+  },
+  {
+   "eps_pp": 2.0,
+   "discordant_rate": 0.1,
+   "n_pairs_per_bin_90pct_power": 2142,
+   "bins18_total_pairs": 38556
+  },
+  {
+   "eps_pp": 2.0,
+   "discordant_rate": 0.15,
+   "n_pairs_per_bin_90pct_power": 3212,
+   "bins18_total_pairs": 57816
+  },
+  {
+   "eps_pp": 3.0,
+   "discordant_rate": 0.06,
+   "n_pairs_per_bin_90pct_power": 571,
+   "bins18_total_pairs": 10278
+  },
+  {
+   "eps_pp": 3.0,
+   "discordant_rate": 0.1,
+   "n_pairs_per_bin_90pct_power": 952,
+   "bins18_total_pairs": 17136
+  },
+  {
+   "eps_pp": 3.0,
+   "discordant_rate": 0.15,
+   "n_pairs_per_bin_90pct_power": 1428,
+   "bins18_total_pairs": 25704
+  },
+  {
+   "eps_pp": 5.0,
+   "discordant_rate": 0.06,
+   "n_pairs_per_bin_90pct_power": 206,
+   "bins18_total_pairs": 3708
+  },
+  {
+   "eps_pp": 5.0,
+   "discordant_rate": 0.1,
+   "n_pairs_per_bin_90pct_power": 343,
+   "bins18_total_pairs": 6174
+  },
+  {
+   "eps_pp": 5.0,
+   "discordant_rate": 0.15,
+   "n_pairs_per_bin_90pct_power": 514,
+   "bins18_total_pairs": 9252
+  }
+ ]
+}

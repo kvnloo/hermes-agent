@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="1.754" timestamp="2026-10-26T07:05:14.386690+00:00" hostname="lab-host"><testcase classname="tests.tools.test_rfc_homework" name="test_chain_doc_reference_race" time="1.376"><failure message="AssertionError: write committed after reference was removed&#10;assert not (True and 'new fact' in 'new fact' and '@doc:rfc-notes' not in ''&#10; +  where True = exists()&#10; +    where exists = PosixPath('/var/tmp/hermes-pytest-1000/r-xvlugo9n/pytest-of-kvn/pytest-0/test_chain_doc_reference_race0/docs/rfc-notes.md').exists&#10; +  and   'new fact' = read_text(encoding='utf-8')&#10; +    where read_text = PosixPath('/var/tmp/hermes-pytest-1000/r-xvlugo9n/pytest-of-kvn/pytest-0/test_chain_doc_reference_race0/docs/rfc-notes.md').read_text&#10;  &#10;  '@doc:rfc-notes' is contained here:)">memory_env = (&lt;tools.memory_tool_store.MemoryStore object at 0x7f7a941f3620&gt;, PosixPath('/var/tmp/hermes-pytest-1000/r-xvlugo9n/pytest-of-kvn/pytest-0/test_chain_doc_reference_race0'))
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x7f7a97291cd0&gt;
+
+    def test_chain_doc_reference_race(memory_env, monkeypatch):
+        """A document write may not commit after its anchor was removed.
+    
+        The test waits after a successful _anchor_gate() check and removes the
+        reference *before* the document's target lock is acquired. Avoid treating
+        this as an established production bug before testing the actual PR head.
+        """
+        store, root = memory_env
+        if not hasattr(store, "_anchor_gate"):
+            pytest.skip("No chain-doc gate on this head")
+        assert store.add("memory", "Pointer @doc:rfc-notes")["success"]
+        approved = Event()
+        continue_writer = Event()
+        results = []
+        original_gate = store._anchor_gate
+    
+        def pause_after_gate(target):
+            result = original_gate(target)
+            if target == "doc:rfc-notes" and current_thread().name == "rfc_doc_writer":
+                approved.set()
+                if not continue_writer.wait(timeout=8):
+                    raise TimeoutError("doc-write interleave release timed out")
+            return result
+    
+        monkeypatch.setattr(store, "_anchor_gate", pause_after_gate)
+        writer = Thread(name="rfc_doc_writer", target=lambda: results.append(store.add("doc:rfc-notes", "new fact")))
+        writer.start()
+        try:
+            assert approved.wait(8), "doc write did not cross reference gate"
+            assert store.remove("memory", "Pointer @doc:rfc-notes")["success"]
+        finally:
+            continue_writer.set()
+        writer.join(8)
+        assert not writer.is_alive() and results
+        archive = root / "docs" / "rfc-notes.md"
+        anchor = (root / "MEMORY.md").read_text(encoding="utf-8")
+&gt;       assert not (archive.exists() and "new fact" in archive.read_text(encoding="utf-8")
+                    and "@doc:rfc-notes" not in anchor), "write committed after reference was removed"
+E       AssertionError: write committed after reference was removed
+E       assert not (True and 'new fact' in 'new fact' and '@doc:rfc-notes' not in ''
+E        +  where True = exists()
+E        +    where exists = PosixPath('/var/tmp/hermes-pytest-1000/r-xvlugo9n/pytest-of-kvn/pytest-0/test_chain_doc_reference_race0/docs/rfc-notes.md').exists
+E        +  and   'new fact' = read_text(encoding='utf-8')
+E        +    where read_text = PosixPath('/var/tmp/hermes-pytest-1000/r-xvlugo9n/pytest-of-kvn/pytest-0/test_chain_doc_reference_race0/docs/rfc-notes.md').read_text
+E         
+E         '@doc:rfc-notes' is contained here:)
+
+tests/tools/test_rfc_homework.py:123: AssertionError</failure></testcase></testsuite></testsuites>

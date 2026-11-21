@@ -1,0 +1,16 @@
+diff --git a/tools/memory_tool_store.py b/tools/memory_tool_store.py
+index c9d7176c..68a55e28 100644
+--- a/tools/memory_tool_store.py
++++ b/tools/memory_tool_store.py
+@@ -373,10 +373,9 @@ class MemoryStore:
+         if not read_ok:
+             return _read_failed_error(path)
+         entries = list(dict.fromkeys(self._parse_entries(raw)))
+-        self._set_entries(target, entries)
+         return {
+             "success": True, "target": target, "entries": entries,
+-            "usage": self._usage_pct(target, self._char_count(target))}
++            "usage": self._usage_pct(target, len(ENTRY_DELIMITER.join(entries)))}
+ 
+     def add(self, target: str, content: str) -> dict[str, Any]:
+         """Append a new entry. Returns error if it would exceed the char limit."""

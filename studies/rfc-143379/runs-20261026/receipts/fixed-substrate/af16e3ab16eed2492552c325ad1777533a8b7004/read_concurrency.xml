@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="2.125" timestamp="2026-10-26T06:59:58.782266+00:00" hostname="lab-host"><testcase classname="tests.tools.test_rfc_homework" name="test_read_concurrency_snapshot" time="1.492"><failure message="AssertionError: read overwrote newer in-memory entries&#10;assert 'newer' in ['original']&#10; +  where ['original'] = _entries_for('memory')&#10; +    where _entries_for = &lt;tools.memory_tool_store.MemoryStore object at 0x7fa513e67620&gt;._entries_for">memory_env = (&lt;tools.memory_tool_store.MemoryStore object at 0x7fa513e67620&gt;, PosixPath('/var/tmp/hermes-pytest-1000/r-xizzslsh/pytest-of-kvn/pytest-0/test_read_concurrency_snapshot0'))
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x7fa5172962c0&gt;
+
+    def test_read_concurrency_snapshot(memory_env, monkeypatch):
+        """If read races an add, a store's disk entries must match its cached entries.
+    
+        On the reviewed PR diff read() does not use the writer's file lock, then
+        updates the mutable in-memory cache. The deliberately paused reader consumes
+        an old snapshot after the new append. A lock-sharing fix should pass.
+        """
+        store, root = memory_env
+        if not hasattr(store, "read"):
+            pytest.skip("This head has no MemoryStore.read")
+        assert store.add("memory", "original")['success']
+        captured = Event()
+        resume_reader = Event()
+        read_result = []
+        write_result = []
+        source_reader = store._read_raw_checked
+    
+        def paused_read(path):
+            raw, ok = source_reader(path)
+            if current_thread().name == "rfc_read_probe" and path.name == "MEMORY.md":
+                captured.set()
+                if not resume_reader.wait(timeout=8):
+                    raise TimeoutError("reader interleave release timed out")
+            return raw, ok
+    
+        monkeypatch.setattr(store, "_read_raw_checked", paused_read)
+    
+        read_thread = Thread(name="rfc_read_probe", target=lambda: read_result.append(store.read("memory")))
+        write_thread = Thread(name="rfc_write_probe", target=lambda: write_result.append(store.add("memory", "newer")))
+        read_thread.start()
+        try:
+            assert captured.wait(8), "read did not reach captured snapshot"
+            write_thread.start()
+            write_thread.join(0.5)  # might block if implementation locks read + write
+        finally:
+            resume_reader.set()
+        read_thread.join(8)
+        write_thread.join(8)
+        assert not read_thread.is_alive() and not write_thread.is_alive()
+        assert read_result and read_result[0]["success"]
+        assert write_result and write_result[0]["success"]
+        raw = (root / "MEMORY.md").read_text(encoding="utf-8")
+        assert "newer" in raw
+&gt;       assert "newer" in store._entries_for("memory"), "read overwrote newer in-memory entries"
+E       AssertionError: read overwrote newer in-memory entries
+E       assert 'newer' in ['original']
+E        +  where ['original'] = _entries_for('memory')
+E        +    where _entries_for = &lt;tools.memory_tool_store.MemoryStore object at 0x7fa513e67620&gt;._entries_for
+
+tests/tools/test_rfc_homework.py:84: AssertionError</failure></testcase></testsuite></testsuites>
