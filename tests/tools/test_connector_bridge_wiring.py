@@ -155,6 +155,27 @@ def test_normalize_rejects_malformed_batches(bad, expected_fragment):
     assert expected_fragment in (err or "")
 
 
+@pytest.mark.parametrize(
+    "bridge_name,recovery",
+    [
+        ("tool_search", "Call `tool_search` directly"),
+        ("tool_describe", "Call `tool_describe` directly"),
+        ("tool_call", "put deferred tool entries directly in the outer 'calls' array"),
+    ],
+)
+def test_normalize_rejects_nested_bridge_with_actionable_recovery(bridge_name, recovery):
+    # Regression for #142677: a model tried to call a bridge through tool_call.
+    # The validator must refuse it without promoting nested arguments to an executable call.
+    bad = {"calls": [{"name": bridge_name, "arguments": {
+        "calls": [{"name": "session_search", "arguments": {"query": "x"}}],
+    }}]}
+    entries, err = normalize_tool_call_entries(bad)
+    assert entries == []
+    assert err is not None
+    assert f"cannot invoke '{bridge_name}' (it is itself a bridge tool)" in err
+    assert recovery in err
+
+
 # ---------------------------------------------------------------------------
 # dispatch_tool_search: remote merge
 # ---------------------------------------------------------------------------
