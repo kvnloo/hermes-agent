@@ -1,0 +1,15 @@
+name: z0-hermes-observer
+version: 0.1.0
+description: Observer-only Hermes lifecycle bridge for z0intelligence experiments.
+provides_hooks:
+  - on_session_start
+  - pre_llm_call
+  - pre_api_request
+  - post_api_request
+  - api_request_error
+  - pre_auxiliary_call
+  - post_auxiliary_call
+  - pre_tool_call
+  - post_tool_call
+  - subagent_stop
+  - on_session_end
