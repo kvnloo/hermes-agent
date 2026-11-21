@@ -46,20 +46,22 @@ const renderEstimateLine = (line: string) => {
 
 export const compactPreview = (s: string, max: number) => {
   const one = s.replace(WS_RE, ' ').trim()
+  const chars = Array.from(one)
 
-  return !one ? '' : one.length > max ? one.slice(0, max - 1) + '…' : one
+  return !one ? '' : chars.length > max ? chars.slice(0, Math.max(0, max - 1)).join('') + '…' : one
 }
 
 export const estimateTokensRough = (text: string) => (!text ? 0 : (text.length + 3) >> 2)
 
 export const edgePreview = (s: string, head = 16, tail = 28) => {
   const one = s.replace(WS_RE, ' ').trim().replace(/\]\]/g, '] ]')
+  const chars = Array.from(one)
 
   return !one
     ? ''
-    : one.length <= head + tail + 4
+    : chars.length <= head + tail + 4
       ? one
-      : `${one.slice(0, head).trimEnd()}.. ${one.slice(-tail).trimStart()}`
+      : `${chars.slice(0, head).join('').trimEnd()}.. ${chars.slice(-tail).join('').trimStart()}`
 }
 
 export const pasteTokenLabel = (text: string, lineCount: number) => {
