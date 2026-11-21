@@ -1,5 +1,8 @@
+import { backendScopeKey } from '@hermes/shared'
 import { useStore } from '@nanostores/react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+
+import { $apiRequestScope } from '@/api/client'
 
 import { restoreListedSession } from '@/app/session/hooks/use-session-actions/utils'
 import { Button } from '@/components/ui/button'
@@ -46,11 +49,15 @@ function newSessionShortcut(): null | string {
 
 const DEFAULT_AUTO_ARCHIVE_DAYS = 3
 
+const archivedRowKey = (session: SessionInfo) =>
+  `${session.connection_id || ''}\0${session.profile || 'default'}\0${session.id}`
+
 interface SessionsSettingsProps {
   subpage?: string
 }
 
 export function SessionsSettings({ subpage }: SessionsSettingsProps = {}) {
+  const scope = useStore($apiRequestScope)
   useSettingDeepLink('sessions', page => subpage === undefined || page === subpage)
 
   if (subpage === 'default-directory') {
@@ -61,7 +68,12 @@ export function SessionsSettings({ subpage }: SessionsSettingsProps = {}) {
     )
   }
 
-  return <ArchivedSessionsSettings includeDefaultDirectory={subpage === undefined} />
+  return (
+    <ArchivedSessionsSettings
+      includeDefaultDirectory={subpage === undefined}
+      key={backendScopeKey(scope.connectionId, scope.profile)}
+    />
+  )
 }
 
 function ArchivedSessionsSettings({ includeDefaultDirectory }: { includeDefaultDirectory: boolean }) {
@@ -70,21 +82,60 @@ function ArchivedSessionsSettings({ includeDefaultDirectory }: { includeDefaultD
   const [sessions, setLocalSessions] = useState<SessionInfo[]>([])
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [loadError, setLoadError] = useState(false)
+  const request = useRef<AbortController | null>(null)
+  const removedRows = useRef(new Set<string>())
 
   const load = useCallback(async () => {
+    request.current?.abort()
+    const controller = new AbortController()
+    request.current = controller
     setLoading(true)
+    setLoadError(false)
 
     try {
-      setLocalSessions(await listEveryArchivedSession())
+      const result = await listEveryArchivedSession({
+        signal: controller.signal,
+        onPage: rows => {
+          if (!controller.signal.aborted) {
+            setLocalSessions(rows.filter(row => row.archived && !removedRows.current.has(archivedRowKey(row))))
+          }
+        }
+      })
+
+      if (!controller.signal.aborted) {
+        setLocalSessions(result.filter(row => row.archived && !removedRows.current.has(archivedRowKey(row))))
+      }
     } catch (err) {
-      notifyError(err, s.failedLoad)
+      if (!controller.signal.aborted) {
+        setLoadError(true)
+        notifyError(err, s.failedLoad)
+      }
     } finally {
-      setLoading(false)
+      if (!controller.signal.aborted) {
+        setLoading(false)
+      }
     }
   }, [s.failedLoad])
 
   useEffect(() => {
+    const scope = $apiRequestScope.get()
+    const originalScope = backendScopeKey(scope.connectionId, scope.profile)
+
+    // The API request itself is not cancellable on this main revision. Stop
+    // publication and the next page synchronously when its source switches.
+    const off = $apiRequestScope.listen(next => {
+      if (backendScopeKey(next.connectionId, next.profile) !== originalScope) {
+        request.current?.abort()
+      }
+    })
+
     void load()
+
+    return () => {
+      off()
+      request.current?.abort()
+    }
   }, [load])
 
   const unarchive = useCallback(
@@ -93,7 +144,8 @@ function ArchivedSessionsSettings({ includeDefaultDirectory }: { includeDefaultD
 
       try {
         await setSessionArchived(session.id, false, session.profile)
-        setLocalSessions(prev => prev.filter(s => s.id !== session.id))
+        removedRows.current.add(archivedRowKey(session))
+        setLocalSessions(prev => prev.filter(row => archivedRowKey(row) !== archivedRowKey(session)))
         // Surface it again in the sidebar without waiting for a full refresh, and
         // lift any optimistic eviction so the grouped tree shows it again too.
         untombstoneSessions([session.id, session._lineage_root_id])
@@ -134,7 +186,8 @@ function ArchivedSessionsSettings({ includeDefaultDirectory }: { includeDefaultD
         // stored tip and the durable lineage root — the journal keys on the
         // stored id and the row may carry either.
         purgeInFlightTurnJournals([session.id, session._lineage_root_id])
-        setLocalSessions(prev => prev.filter(s => s.id !== session.id))
+        removedRows.current.add(archivedRowKey(session))
+        setLocalSessions(prev => prev.filter(row => archivedRowKey(row) !== archivedRowKey(session)))
         triggerHaptic('warning')
       } catch (err) {
         notifyError(err, s.deleteFailed)
@@ -148,10 +201,10 @@ function ArchivedSessionsSettings({ includeDefaultDirectory }: { includeDefaultD
   useDeepLinkHighlight({
     elementId: id => `archived-session-${id}`,
     param: 'session',
-    ready: id => !loading && sessions.some(session => session.id === id)
+    ready: id => sessions.some(session => session.id === id)
   })
 
-  if (loading) {
+  if (loading && sessions.length === 0 && !loadError) {
     return <SettingsSkeleton sections={[{ rows: 1 }, { heading: true, rows: 4 }]} />
   }
 
@@ -170,7 +223,21 @@ function ArchivedSessionsSettings({ includeDefaultDirectory }: { includeDefaultD
         {s.archivedIntro}
       </p>
 
-      {sessions.length === 0 ? (
+      {loading && (
+        <p className="mb-2 text-(--ui-text-secondary)" role="status">
+          {s.loading}
+        </p>
+      )}
+      {loadError && (
+        <div className="mb-3 flex items-center gap-3" role="alert">
+          <span>{s.failedLoad}</span>
+          <Button onClick={() => void load()} size="sm" type="button" variant="textStrong">
+            {t.common.retry}
+          </Button>
+        </div>
+      )}
+
+      {sessions.length === 0 && !loading && !loadError ? (
         <EmptyState description={s.emptyArchivedDesc} title={s.emptyArchivedTitle} />
       ) : (
         <div className="grid gap-1">
@@ -179,7 +246,7 @@ function ArchivedSessionsSettings({ includeDefaultDirectory }: { includeDefaultD
             const busy = busyId === session.id
 
             return (
-              <div className="scroll-mt-6 rounded-lg" id={`archived-session-${session.id}`} key={session.id}>
+              <div className="scroll-mt-6 rounded-lg" id={`archived-session-${session.id}`} key={archivedRowKey(session)}>
                 <ListRow
                   action={
                     <div className="flex items-center gap-1.5">

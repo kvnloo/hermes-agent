@@ -35,7 +35,12 @@ const ARCHIVED_FETCH_PAGE_SIZE = 500
  * a page with no new archived row stops it too: a row archived or reordered
  * mid-load can leave the distinct count short for good.
  */
-export async function listEveryArchivedSession(): Promise<SessionInfo[]> {
+export async function listEveryArchivedSession(
+  options: {
+    onPage?: (sessions: SessionInfo[]) => void
+    signal?: AbortSignal
+  } = {}
+): Promise<SessionInfo[]> {
   const sessions: SessionInfo[] = []
   const seen = new Set<string>()
   let archivedCount = 0
@@ -43,7 +48,11 @@ export async function listEveryArchivedSession(): Promise<SessionInfo[]> {
   let offset = 0
 
   while (true) {
+    // The REST list API has no AbortSignal input yet. Fence publication and
+    // further requests when a Settings mount or scope is superseded.
+    options.signal?.throwIfAborted()
     const page = await listAllProfileSessions(ARCHIVED_FETCH_PAGE_SIZE, 0, 'only', 'recent', 'all', {}, offset)
+    options.signal?.throwIfAborted()
     const archivedBefore = archivedCount
 
     for (const session of page.sessions) {
@@ -60,6 +69,14 @@ export async function listEveryArchivedSession(): Promise<SessionInfo[]> {
     }
 
     offset += ARCHIVED_FETCH_PAGE_SIZE
+
+    // A later timeout must never erase pages already received. Consumers
+    // own the incomplete/error state and cannot mutate this snapshot.
+    options.onPage?.([...sessions])
+
+    if (page.errors?.length) {
+      throw new Error(page.errors[0].error)
+    }
 
     if (
       page.sessions.length === 0 ||
