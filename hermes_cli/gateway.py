@@ -837,7 +837,18 @@ def find_windows_gateway_services(
         hermes_roots = hermes_service_roots()
         service_names_by_pid: dict[int, set[str]] = {}
         indeterminate_services_by_pid: dict[int, list[tuple[str, object]]] = {}
-        for service in psutil_module.win_service_iter():
+        # Some standard-user sessions cannot enumerate SCM services (OpenSCManager access denied),
+        # even when their gateways are ordinary processes discoverable from profile PID files.
+        # Consume enumeration before inspection so a mid-stream denial discards partial SCM results.
+        try:
+            services = list(psutil_module.win_service_iter())
+        except (PermissionError, getattr(psutil_module, "AccessDenied", PermissionError)):
+            print(
+                "Warning: Windows SCM enumeration denied; using process-only gateway handling.",
+                file=sys.stderr,
+            )
+            return []
+        for service in services:
             try:
                 service_name = str(_scm_service_field(service, "name") or "")
                 if not service_name:
