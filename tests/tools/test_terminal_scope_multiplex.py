@@ -303,3 +303,206 @@ def test_launch_turn_binds_terminal_scope_once_multiplexing_is_active(
     finally:
         reset_terminal_scope(token)
     assert get_terminal_scope() is None
+
+
+def test_scope_projects_home_mode_into_policy(tmp_path):
+    """The canonical TERMINAL_CONFIG_ENV_MAP must include ``home_mode`` so that
+    ``build_profile_terminal_scope`` projects the profile's ``home_mode`` into
+    the scope. Without the mapping ``TERMINAL_HOME_MODE`` is silently dropped
+    while peer keys (backend/ssh_host) project, violating the scope's
+    "total policy" contract (#101242).
+    """
+    from tools.terminal_scope import (
+        build_profile_terminal_scope,
+        set_terminal_scope,
+        reset_terminal_scope,
+    )
+
+    home = _profile(
+        tmp_path,
+        "hmode",
+        "terminal:\n  backend: docker\n  home_mode: profile\n"
+        "  ssh_host: example.com\n  ssh_port: 2222\n",
+    )
+    scope = build_profile_terminal_scope(home)
+    assert "TERMINAL_HOME_MODE" in scope, (
+        "home_mode was dropped from the per-profile scope — "
+        "TERMINAL_CONFIG_ENV_MAP is missing the home_mode mapping"
+    )
+    token = set_terminal_scope(scope)
+    try:
+        assert terminal_env("TERMINAL_HOME_MODE", "auto") == "profile"
+        assert terminal_env("TERMINAL_ENV") == "docker"
+        assert terminal_env("TERMINAL_SSH_HOST") == "example.com"
+        assert terminal_env("TERMINAL_SSH_PORT", "22") == "2222"
+    finally:
+        reset_terminal_scope(token)
+
+
+def test_scope_defaults_home_mode_to_auto_when_profile_omits_it(tmp_path):
+    """A profile that omits ``home_mode`` gets the defined default ``auto`` via
+    the scope, not the launch process's ambient value."""
+    from tools.terminal_scope import (
+        build_profile_terminal_scope,
+        set_terminal_scope,
+        reset_terminal_scope,
+    )
+
+    home = _profile(tmp_path, "automode", "terminal:\n  backend: local\n")
+    scope = build_profile_terminal_scope(home)
+    assert scope.get("TERMINAL_HOME_MODE") == "auto"
+    token = set_terminal_scope(scope)
+    try:
+        assert terminal_env("TERMINAL_HOME_MODE", "profile") == "auto"
+    finally:
+        reset_terminal_scope(token)
+
+
+def test_routed_profile_home_mode_profile_drives_subprocess_home(tmp_path, monkeypatch):
+    """End-to-end through the gateway boundary.
+
+    A routed profile configured with ``home_mode: profile``, served from a
+    launch process whose ambient ``TERMINAL_HOME_MODE=auto``, must resolve
+    subprocess ``HOME`` to ``{HERMES_HOME}/home`` via ``get_subprocess_home`` —
+    honoring the routed profile's policy, not the launch process's ambient
+    value. Both defects (scope projection + consumer scope-read) are required
+    for this to pass (#101242).
+    """
+    import gateway.run as gw
+    import hermes_constants
+
+    monkeypatch.setenv("TERMINAL_HOME_MODE", "auto")
+    monkeypatch.setattr(hermes_constants, "is_container", lambda: False)
+
+    home = _profile(
+        tmp_path, "coder", "terminal:\n  backend: local\n  home_mode: profile\n"
+    )
+    (home / "home").mkdir()
+    real_home = tmp_path / "real-home"
+    real_home.mkdir()
+    monkeypatch.setenv("HOME", str(real_home))
+    monkeypatch.setenv("HERMES_HOME", str(home))
+
+    with gw._profile_runtime_scope(home):
+        from hermes_constants import get_subprocess_home
+
+        assert terminal_env("TERMINAL_HOME_MODE", "auto") == "profile"
+        assert get_subprocess_home() == str(home / "home")
+    from hermes_constants import get_subprocess_home
+
+    assert get_subprocess_home() is None
+
+
+def test_routed_profile_home_mode_auto_does_not_inherit_launch_profile(tmp_path, monkeypatch):
+    """The inverse leak: a routed profile with ``home_mode: auto`` must NOT
+    inherit the launch process's ambient ``profile`` mode through the stale
+    ``os.environ`` read path. Subprocess ``HOME`` stays the real account HOME.
+    """
+    import gateway.run as gw
+    import hermes_constants
+
+    monkeypatch.setenv("TERMINAL_HOME_MODE", "profile")
+    monkeypatch.setattr(hermes_constants, "is_container", lambda: False)
+
+    home = _profile(
+        tmp_path, "autohost", "terminal:\n  backend: local\n  home_mode: auto\n"
+    )
+    (home / "home").mkdir()
+    real_home = tmp_path / "real-home"
+    real_home.mkdir()
+    monkeypatch.setenv("HOME", str(real_home))
+    monkeypatch.setenv("HERMES_HOME", str(home))
+
+    with gw._profile_runtime_scope(home):
+        from hermes_constants import get_subprocess_home
+
+        assert terminal_env("TERMINAL_HOME_MODE", "profile") == "auto"
+        assert get_subprocess_home() is None
+    from hermes_constants import get_subprocess_home
+
+    assert get_subprocess_home() == str(home / "home")
+
+
+def test_routed_a_b_a_build_subprocess_env_respects_home_mode_and_restores_launch_env(
+    tmp_path, monkeypatch
+):
+    """Real-path A->B->A regression through the production child-env builder.
+
+    The launch profile A runs at ``home_mode=auto`` (real HOME preserved). Routed profile B
+    declares ``home_mode: profile``; while B's scope is bound, ``build_subprocess_env`` must
+    resolve the child ``HOME`` to B's profile home, and after the scope is released the same
+    builder must restore A's launch behavior (real HOME) -- neither the scope nor B's policy
+    leaks back into the launch env (#101242, root AGENTS.md real-import E2E requirement)."""
+    import hermes_constants
+    from tools.environments.local import build_subprocess_env
+
+    monkeypatch.setattr(hermes_constants, "is_container", lambda: False)
+    real_home = tmp_path / "real-home"
+    real_home.mkdir()
+    monkeypatch.setenv("HOME", str(real_home))
+
+    # Launch profile A: ambient home_mode=auto, HOME stays real.
+    launch_home = tmp_path / "profiles" / "launch"
+    launch_home.mkdir(parents=True)
+    (launch_home / "config.yaml").write_text("terminal:\n  backend: local\n", encoding="utf-8")
+    monkeypatch.setenv("HERMES_HOME", str(launch_home))
+    monkeypatch.setenv("TERMINAL_HOME_MODE", "auto")
+
+    def _child_home():
+        return build_subprocess_env().get("HOME")
+
+    # A: no scope bound, ambient auto -- real HOME is preserved.
+    assert _child_home() == str(real_home)
+
+    # B: routed profile with home_mode=profile (scope + hermes_home override, the real
+    # gateway multiplex path installed by _profile_runtime_scope).
+    b_home = tmp_path / "profiles" / "routed"
+    b_home.mkdir(parents=True)
+    (b_home / "home").mkdir()
+    (b_home / "config.yaml").write_text(
+        "terminal:\n  backend: local\n  home_mode: profile\n", encoding="utf-8"
+    )
+    import gateway.run as gw
+
+    with gw._profile_runtime_scope(b_home):
+        assert terminal_env("TERMINAL_HOME_MODE", "auto") == "profile"
+        assert _child_home() == str(b_home / "home")
+
+    # A again: scope released, launch policy restored -- no leak of B's profile home.
+    assert get_terminal_scope() is None
+    assert _child_home() == str(real_home)
+
+
+def test_routed_home_mode_from_dotenv_and_yaml_precedence(tmp_path):
+    """``terminal.home_mode`` is projected from both the profile ``.env``
+    (``TERMINAL_HOME_MODE``) and ``config.yaml`` (``terminal.home_mode``), and
+    YAML wins over ``.env`` -- the same precedence every other terminal key uses
+    in ``build_profile_terminal_scope`` (#101242)."""
+    from tools.terminal_scope import build_profile_terminal_scope
+
+    # .env sets profile, YAML omits home_mode -> .env value projects.
+    env_only = _profile(
+        tmp_path, "envonly", "terminal:\n  backend: local\n",
+        dotenv="TERMINAL_HOME_MODE=profile\n",
+    )
+    (env_only / "home").mkdir()
+    scope_env = build_profile_terminal_scope(env_only)
+    assert scope_env.get("TERMINAL_HOME_MODE") == "profile"
+
+    # YAML sets real, .env sets profile -> YAML wins.
+    both = _profile(
+        tmp_path, "both",
+        "terminal:\n  backend: local\n  home_mode: real\n",
+        dotenv="TERMINAL_HOME_MODE=profile\n",
+    )
+    (both / "home").mkdir()
+    scope_both = build_profile_terminal_scope(both)
+    assert scope_both.get("TERMINAL_HOME_MODE") == "real"
+
+    # YAML sets profile, .env omits -> YAML value projects.
+    yaml_only = _profile(
+        tmp_path, "yamlonly", "terminal:\n  backend: local\n  home_mode: profile\n"
+    )
+    (yaml_only / "home").mkdir()
+    scope_yaml = build_profile_terminal_scope(yaml_only)
+    assert scope_yaml.get("TERMINAL_HOME_MODE") == "profile"
