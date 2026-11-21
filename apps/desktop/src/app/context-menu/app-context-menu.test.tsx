@@ -430,6 +430,34 @@ describe('AppContextMenu', () => {
     expect(screen.getByText('the')).toBeTruthy()
   })
 
+  it('shows spelling suggestions when Chromium reports before the editable DOM menu opens', async () => {
+    installBridge()
+    mountMenu()
+    const host = attach('<textarea>casssa</textarea>')
+    const textarea = host.querySelector('textarea')!
+
+    // Electron may send its native facts before the renderer captures contextmenu.
+    augmentSpellcheck({ misspelledWord: 'casssa', suggestions: ['casa'], x: 24, y: 42 })
+    fireEvent.contextMenu(textarea, { clientX: 24, clientY: 42 })
+
+    expect(await screen.findByText('casa')).toBeTruthy()
+    expect(screen.getByText('Add to dictionary')).toBeTruthy()
+  })
+
+  it('does not attach an early native spelling report to an unrelated click', async () => {
+    installBridge()
+    mountMenu()
+    const host = attach('<textarea>casssa</textarea>')
+    const textarea = host.querySelector('textarea')!
+
+    augmentSpellcheck({ misspelledWord: 'casssa', suggestions: ['casa'], x: 24, y: 42 })
+    fireEvent.contextMenu(textarea, { clientX: 50, clientY: 60 })
+
+    expect(await screen.findByText('Paste')).toBeTruthy()
+    expect(screen.queryByText('casa')).toBeNull()
+    expect(screen.queryByText('Add to dictionary')).toBeNull()
+  })
+
   // A browser host whose bridge can run the edit verbs keeps the app menu too, cancelling its own.
   it.each(['electron', 'browser'])('%s: edit verbs run after the menu closed, field refocused', async hostKind => {
     const contextMenuEdit = vi.fn().mockResolvedValue(undefined)

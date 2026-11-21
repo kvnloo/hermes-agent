@@ -1,6 +1,6 @@
 import type { TouchEvent as ReactTouchEvent } from 'react'
 
-import { isMacPlatform } from '@/lib/platform'
+import { isMacPlatform, isWindowsPlatform } from '@/lib/platform'
 
 import { placeCaretEnd } from './rich-editor'
 
@@ -8,15 +8,13 @@ import { placeCaretEnd } from './rich-editor'
 const TAP_MAX_MOVE_PX = 10
 const TAP_MAX_MS = 500
 
-/** Text-entry attributes for the composer editor. Desktop keeps them off: the
- *  composer takes paths, code and commands, and Chromium's macOS
- *  text-replacement path shares the autocorrect gate (spellcheck stays off, so
- *  smart quotes and dashes stay out). A touch host types prose on a soft
- *  keyboard and gets the platform's casing, correction and spelling. */
+/** Text-entry attributes for the composer editor. macOS keeps spellcheck off
+ *  to avoid smart-quote/dash replacement in technical prompts; Windows enables
+ *  spelling underlines without autocorrection. Touch hosts use the soft keyboard. */
 export function composerTextEntryProps(touch: boolean) {
   return touch
     ? ({ autoCapitalize: 'sentences', autoCorrect: 'on', spellCheck: true } as const)
-    : ({ autoCapitalize: 'off', autoCorrect: isMacPlatform() ? 'on' : 'off', spellCheck: false } as const)
+    : ({ autoCapitalize: 'off', autoCorrect: isMacPlatform() ? 'on' : 'off', spellCheck: isWindowsPlatform() } as const)
 }
 
 const stillAt = (from: { x: number; y: number }, touch: { clientX: number; clientY: number }) =>
