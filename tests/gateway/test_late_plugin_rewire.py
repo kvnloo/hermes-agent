@@ -34,6 +34,9 @@ def _write_plugin(home: Path, name: str = "late_cmd") -> None:
         def register(ctx):
             ctx.register_command("late", lambda raw: "hi", description="late")
             ctx.register_platform_handler("telegram", lambda app, adapter: None)
+            ctx.register_tool(name="late_tool", toolset="late_ts", handler=lambda args, **kw: "{}",
+                              schema={"name": "late_tool", "description": "t",
+                                      "parameters": {"type": "object", "properties": {}}})
     '''))
     (home / "config.yaml").write_text(f"plugins:\n  enabled: [{name}]\n")
 
