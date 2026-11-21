@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import hmac
 import os
 import secrets
 import socket
@@ -73,7 +74,12 @@ class WXBizMsgCrypt:
         return self.decrypt(msg_signature, timestamp, nonce, echostr).decode("utf-8")
 
     def decrypt(self, msg_signature: str, timestamp: str, nonce: str, encrypt: str) -> bytes:
-        if _sha1_signature(self.token, timestamp, nonce, encrypt) != msg_signature:
+        expected = _sha1_signature(self.token, timestamp, nonce, encrypt)
+        # Compare as bytes: compare_digest raises TypeError on a str with
+        # non-ASCII characters, and msg_signature is a raw request query
+        # parameter on a public, unauthenticated endpoint. Constant-time
+        # compare keeps the request path from being a timing oracle.
+        if not hmac.compare_digest(expected.encode(), msg_signature.encode()):
             raise SignatureError("signature mismatch")
         try:
             cipher_text = base64.b64decode(encrypt)
