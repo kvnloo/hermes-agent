@@ -23,6 +23,7 @@ from functools import partial
 from pathlib import Path
 from typing import Any, Dict, FrozenSet, Optional
 
+from agent.tts_reserved_names import BUILTIN_TTS_PROVIDERS
 from hermes_cli.process_identity import release_process_group_once_empty, spawn_owned
 from utils import is_truthy_value
 
@@ -297,10 +298,7 @@ def _command_output_format(config: dict[str, Any], formats: frozenset[str], defa
 
 # ---- TTS ``tts.providers.<name>`` layer -----------------------------------
 
-# Any ``tts.provider`` value NOT in this set refers to ``tts.providers.<name>``.
-BUILTIN_TTS_PROVIDERS = frozenset({
-    "edge", "elevenlabs", "openai", "minimax", "xai", "mistral", "gemini",
-    "neutts", "kittentts", "piper", "deepinfra"})
+# Any ``tts.provider`` value NOT in ``BUILTIN_TTS_PROVIDERS`` refers to ``tts.providers.<name>``.
 
 DEFAULT_COMMAND_TTS_TIMEOUT_SECONDS = 120
 DEFAULT_COMMAND_TTS_OUTPUT_FORMAT = "mp3"
