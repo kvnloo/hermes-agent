@@ -469,10 +469,10 @@ function MarkdownImageContent({
     )
   }
 
-  // The image keeps its natural size (never upscaled) inside the fixed frame;
-  // the w-fit container hugs it so the download button and shadow sit on the
-  // image, not on the letterbox. Without a frame (a source that failed last
-  // time) it lays out as a plain capped image, like before frames existed.
+  // A cold frame must contain the image without a percentage max-height
+  // through ZoomableImage's auto-height button. Fill the definite frame and
+  // scale the image down within it (never upscale); keep unframed fallback
+  // images in normal flow.
   const framed = Boolean(image.frameStyle)
 
   return (
@@ -482,13 +482,13 @@ function MarkdownImageContent({
           {...props}
           alt={alt}
           className={cn(
-            'm-0 block h-auto w-auto max-w-full rounded-lg object-scale-down shadow-[0_0.0625rem_0.125rem_color-mix(in_srgb,#000_4%,transparent),0_0.625rem_1.5rem_color-mix(in_srgb,#000_5%,transparent)]',
-            framed ? 'max-h-full' : 'max-h-(--image-preview-height)',
+            'm-0 block max-w-full rounded-lg object-scale-down shadow-[0_0.0625rem_0.125rem_color-mix(in_srgb,#000_4%,transparent),0_0.625rem_1.5rem_color-mix(in_srgb,#000_5%,transparent)]',
+            framed ? 'absolute inset-0 size-full object-left-top' : 'h-auto w-auto max-h-(--image-preview-height)',
             className
           )}
           containerClassName={
             framed
-              ? 'absolute left-0 top-0 block h-full w-fit'
+              ? 'absolute inset-0 block size-full [&>button]:size-full'
               : 'block w-fit max-w-[min(100%,var(--image-preview-max-width))]'
           }
           onError={event => {
