@@ -93,6 +93,75 @@ describe('transcript tail cache', () => {
     expect(loadTranscriptTail('sess-54')).not.toBeNull()
   })
 
+
+  it('frees old transcript tails before a quota-pressured group room write', async () => {
+    // 31 cached tails use ~9.2 MB, like the lost-room report. A full origin
+    // leaves no room for a normal 30-message group, even though each tail fits.
+    const ids = Array.from({ length: 31 }, (_, index) => `old-${index}`)
+    const cached = JSON.stringify({ messages: [msg('cached', 148_000)], savedAt: 1 })
+
+    for (const id of ids) {
+      window.localStorage.setItem(`hermes.transcript-tail.v2:${id}`, cached)
+    }
+
+    window.localStorage.setItem('hermes.transcript-tail.v2-index', JSON.stringify(ids))
+    window.localStorage.setItem('hermes.unrelated', 'u'.repeat(120_000))
+
+    // Browser quotas vary. Reproduce the failure at a deterministic 9.5 MB.
+    const quotaBytes = 9_500_000
+    const storedBytes = (store: Storage): number => {
+      let used = 0
+
+      for (let index = 0; index < store.length; index++) {
+        const storedKey = store.key(index)!
+        used += 2 * (storedKey.length + (store.getItem(storedKey)?.length ?? 0))
+      }
+
+      return used
+    }
+    const nativeSetItem = Storage.prototype.setItem
+    const quota = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key, value) {
+      let used = storedBytes(this)
+      const previous = this.getItem(key)
+      if (previous !== null) used -= 2 * (key.length + previous.length)
+
+      if (used + 2 * (key.length + value.length) > quotaBytes) {
+        throw new DOMException('Storage quota exceeded', 'QuotaExceededError')
+      }
+
+      nativeSetItem.call(this, key, value)
+    })
+
+    try {
+      vi.resetModules()
+      const [{ loadTranscriptTail }, { writeKey }] = await Promise.all([
+        import('./transcript-tail-cache'),
+        import('@/lib/storage')
+      ])
+
+      // Cold load must trim the old cache even before any new tail is saved.
+      expect(loadTranscriptTail('missing')).toBeNull()
+
+      const key = 'hermes.plugin.hermes-bots.group-chats'
+      const log = Array.from({ length: 30 }, (_, at) => ({
+        at,
+        from: { kind: 'user', name: 'You' },
+        text: 'r'.repeat(5_000)
+      }))
+      const rooms = JSON.stringify({ Team: { log } })
+
+      // A quota mock alone can silently allow this write. Prove that cold
+      // eviction actually reserves enough bytes for the durable room record.
+      expect(storedBytes(window.localStorage) + 2 * (key.length + rooms.length)).toBeLessThanOrEqual(quotaBytes)
+      writeKey(key, rooms)
+
+      expect(window.localStorage.getItem(key)).toBe(rooms)
+    } finally {
+      quota.mockRestore()
+      vi.resetModules()
+    }
+  })
+
   it('repairs a poisoned persisted tail carrying a duplicate toolCallId (#87857)', () => {
     // A tail written by an older build can hold one message with two tool-call
     // parts sharing an id. This path paints DIRECTLY into the view and the same
