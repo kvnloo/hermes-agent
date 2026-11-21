@@ -117,6 +117,7 @@ export const hubsEn = {
         resume: 'resume',
         footerReplay: 'Enter/d detail · e steer · x stop · Esc back',
         footerLive: 'Enter/t tail · d detail · e steer · x stop · Esc back',
+        processOnly: 'Close this panel, then /stop to stop background processes',
         listNavReplay: 'Enter/→ detail',
         listNavLive: 'Enter tail · d/→ detail',
         // {0} listNavReplay/listNavLive, {1} controls hint, {2} sort label, {3} filter label, {4} history hint
