@@ -272,6 +272,29 @@ describe('createSessionRpcDispatcher: routes by the session OWNING connection wh
     expect(gatewayMocks.requestGatewayForProfile).not.toHaveBeenCalled()
     expect(ambientRequest).not.toHaveBeenCalled()
   })
+
+  it('keeps local process.list and prompt.submit off SSH after a same-name profile reconnect', async () => {
+    gatewayMocks.activeConnectionId = 'ssh'
+    $connectionsRegistry.set({ connections: [{ id: 'local' }, { id: 'ssh' }] } as never)
+    $profiles.set([{ name: 'default' }, { name: 'privat' }] as never)
+
+    // Both connections have "privat". A stale SSH hint conflicts with the
+    // connection-tagged row and the event from the already-running local turn.
+    setSessions([makeSessionInfo({ id: 'stored-omar', connection_id: 'local', profile: 'privat' })])
+    setSessionOwnerHint('stored-omar', { connectionId: 'ssh', profile: 'privat' })
+    recordSessionEventScope({ connectionId: 'local', profile: 'privat', session_id: 'rt-omar' })
+    const { ambientRequest, request } = dispatcher()
+
+    for (const method of ['process.list', 'prompt.submit']) {
+      const params = { session_id: 'rt-omar', text: 'follow-up' }
+      await expect(request(method, params)).resolves.toEqual({ routed: true })
+      expect(gatewayMocks.requestGatewayForAgent).toHaveBeenLastCalledWith('local', 'privat', method, params)
+    }
+
+    expect(gatewayMocks.requestGatewayForProfile).not.toHaveBeenCalled()
+    expect(ambientRequest).not.toHaveBeenCalled()
+  })
+
 })
 
 describe('createSessionRpcDispatcher: stale runtime recovery', () => {
