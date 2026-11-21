@@ -1044,19 +1044,36 @@ def scratch_dir_usage_bytes(scratch: Path | None = None) -> int:
     return total
 
 
+_CS_DARWIN_USER_TEMP_DIR = 65537  # <unistd.h>; Python's os.confstr_names omits it
+
+
+def _os_default_tmp_dir() -> str:
+    """The per-user temp dir macOS launchd exports as ``TMPDIR`` to every process, normalised;
+    ``""`` elsewhere. It is the OS's value, not a choice the user made."""
+    if sys.platform != "darwin":
+        return ""
+    try:
+        default = os.confstr(_CS_DARWIN_USER_TEMP_DIR) or ""
+    except (OSError, ValueError):
+        return ""
+    return os.path.realpath(default.rstrip("/")) if default else ""
+
+
 def apply_scratch_tmp_env(env: MutableMapping[str, str]) -> bool:
     """Point ``TMPDIR``/``TMP``/``TEMP`` in *env* at the scratch dir of ``env["HERMES_HOME"]``.
 
-    A temp var the user (or the OS: macOS ``/var/folders``, Windows ``%TEMP%``) set is
-    respected and nothing changes. A value Hermes itself exported earlier — recognisable
-    because it equals ``HERMES_SCRATCH_DIR`` — is re-derived, so a child running under another
-    profile's home gets that home's scratch dir rather than its parent's. Returns True when
-    the vars were (re)written.
+    A temp var the user set is respected and nothing changes. The OS default is not a user
+    choice: launchd hands every macOS process ``TMPDIR=/var/folders/.../T/``, so honouring it
+    sent every Mac's temp files past the scratch prune; that exact value is redirected like an
+    unset var. A value Hermes itself exported earlier — recognisable because it equals
+    ``HERMES_SCRATCH_DIR`` — is re-derived, so a child running under another profile's home gets
+    that home's scratch dir rather than its parent's. Returns True when the vars were (re)written.
     """
     ours = env.get(SCRATCH_DIR_MARKER_ENV, "")
+    os_default = _os_default_tmp_dir()
     for key in SCRATCH_TMP_ENV_VARS:
         value = env.get(key, "").strip()
-        if value and value != ours:
+        if value and value != ours and not (os_default and os.path.realpath(value.rstrip("/")) == os_default):
             return False
     home = env.get("HERMES_HOME", "").strip()
     try:
