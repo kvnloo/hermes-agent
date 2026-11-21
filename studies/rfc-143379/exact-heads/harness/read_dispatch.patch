@@ -1,0 +1,93 @@
+Proposed downstream-only control for PR #141876
+Base: af16e3ab16eed2492552c325ad1777533a8b7004
+Not applied or executed. The harness also supplies an equivalent, explicitly
+labelled PATCHED_INSTRUMENTED_CONTROL using the actual checkout functions.
+
+Standalone read is supported; batch read is not advertised. Ambiguous read plus
+operations is rejected rather than silently dropping the requested operations.
+_mutation_lock below is NEW in this proposal: it does not exist on the inspected
+#141876/main heads. The existing production _file_lock remains in both paths.
+
+--- a/tools/memory_tool_store.py
++++ b/tools/memory_tool_store.py
+@@ -7,6 +7,7 @@
+ import logging
+ import os
+ import re
++import threading
+ import time
+ from contextlib import contextmanager, suppress
+ from contextvars import ContextVar
+@@ -190,6 +191,8 @@
+         self.memory_enabled, self.user_profile_enabled = memory_enabled, user_profile_enabled
+         self._system_prompt_snapshot: dict[str, str] = {"memory": "", "user": ""}
+         self._consolidation_failures = 0  # per turn; reset by reset_consolidation_failures()
++        # Serialize cache publication with mutations on this same store instance.
++        self._mutation_lock = threading.RLock()
+ 
+     # Per-turn counter of failed at-capacity consolidation attempts; reset at each turn boundary by
+     # reset_consolidation_failures() (#42405).
+@@ -348,7 +351,7 @@
+         returns is passed through verbatim and nothing is persisted: error dicts, or the
+         success payload of a read-only closure (``resolve_entry``, ``resolve_batch_entries``)."""
+         path = self._path_for(target)
+-        with self._file_lock(path):
++        with self._mutation_lock, self._file_lock(path):
+             raw, read_ok = self._read_raw_checked(path)
+             if not read_ok:
+                 return _read_failed_error(path)
+@@ -374,13 +377,16 @@
+     def read(self, target: str) -> dict[str, Any]:
+         """Entries of *target* as stored on disk (read-only: no gate, no drift guard, no write)."""
+         path = self._path_for(target)
+-        raw, read_ok = self._read_raw_checked(path)
+-        if not read_ok:
+-            return _read_failed_error(path)
+-        entries = list(dict.fromkeys(self._parse_entries(raw)))
+-        self._set_entries(target, entries)
+-        return {
+-            "success": True, "target": target, "entries": entries,
+-            "usage": self._usage_pct(target, self._char_count(target))}
++        # The file lock protects the disk snapshot; the shared store lock also
++        # protects publication into the live cache from same-instance writers.
++        with self._mutation_lock, self._file_lock(path):
++            raw, read_ok = self._read_raw_checked(path)
++            if not read_ok:
++                return _read_failed_error(path)
++            entries = list(dict.fromkeys(self._parse_entries(raw)))
++            self._set_entries(target, entries)
++            return {
++                "success": True, "target": target, "entries": entries,
++                "usage": self._usage_pct(target, self._char_count(target))}
+ 
+     def add(self, target: str, content: str) -> dict[str, Any]:
+--- a/tools/memory_tool.py
++++ b/tools/memory_tool.py
+@@ -256,6 +256,8 @@
+     if target_error is not None:
+         return "rejected", json.dumps(target_error)
+     if action == "read":
++        if operations is not None:
++            return _invalid("'read' is standalone-only; omit 'operations' and make writes in a separate call.")
+         return _applied(store.read(target))
+     if operations:
+         if not isinstance(operations, list):
+@@ -407,7 +409,8 @@
+             "action": {
+                 "type": "string",
+                 "enum": ["add", "patch", "remove", "read"],
+-                "description": "The action to perform (single-op shape). Omit when using 'operations'."
++                "description": "The action to perform (single-op shape). Omit when using 'operations'. "
++                               "'read' is standalone-only: omit 'operations'."
+             },
+             "target": {
+                 "type": "string",
+@@ -435,7 +438,7 @@
+                 "items": {
+                     "type": "object",
+                     "properties": {
+-                        "action": {"type": "string", "enum": ["add", "patch", "remove", "read"]},
++                        "action": {"type": "string", "enum": ["add", "patch", "remove"]},
+                         "content": {"type": "string", "description": "Required for add and patch, as 'content' above."},
+                         "new_text": {"type": "string", "description": "Alias for 'content' in a batch op."},
+                         "old_text": {"type": "string", "description": "As 'old_text' above."},

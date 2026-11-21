@@ -1,0 +1,27 @@
+{
+  "label": "downstream_semantic_combination_with_exact_native_merge_parents",
+  "phase": "combined",
+  "native_merge_head": "96dc75192a82b6c5645a89c2eb894fba97ad2bbd",
+  "main": "fab9b01c915a3118cc8daa6cc1b18c15b3f982d0",
+  "target": "f678f4c7e5d994f03d8759fe0e950d3407ccca7e",
+  "detector": "96dc75192a82b6c5645a89c2eb894fba97ad2bbd",
+  "files": [
+    {
+      "path": "tools/memory_tool.py",
+      "sha256": "da955bf0d3346c5afcbe8f71152a23866d38299afafcad65134489b74ee479eb"
+    },
+    {
+      "path": "agent/background_review.py",
+      "sha256": "e5cfe6cfb7efe58a79caa3aaf4275be08c3f542fe7a91fd9aff543bb9e77d32b"
+    },
+    {
+      "path": "tests/tools/test_memory_tool.py",
+      "sha256": "f57e47549e3950ecede5074fb4e7557b4d1cc057e7f45943a93c4381466bb01e"
+    },
+    {
+      "path": "tests/agent/test_review_prompt_consent.py",
+      "sha256": "b4ea9159ed84cd3431164657c8035b1ef7fff80a8fbe065df74c0725a3409089"
+    }
+  ],
+  "tests_executed": false
+}

@@ -1,0 +1,20 @@
+{
+  "node": "mbp",
+  "limits": {"memory": "3G", "cpus": 2},
+  "platform": "Linux-7.2.3-1-cachyos-x86_64-with-glibc2.44",
+  "python": "3.14.7",
+  "source_package_parent": "a1234179fea1493fb9c565f829221491e907cc08",
+  "measurements": [
+    {"fleet_job": "20261023-014926-8dfc", "command": "python3 run_study.py", "used": ["read-main.json", "read-pr141876.json", "read-pr139606.json", "chain-pr116673.json", "consent-main.json", "consent-pr116834.json", "consent-pr116846.json"], "excluded": "Initial long-session fixture was pruned before the selector; combination setup failed."},
+    {"fleet_job": "20261023-015406-c312", "command": "python3 run_study.py --only long-main long-pr140008", "used": ["long-main.json", "long-pr140008.json"], "fixture_fix": "Each tool result is below the real 200-character pruning floor. Every cycle must deliver identifiers."},
+    {"fleet_job": "20261023-015845-6571", "command": "python3 run_study.py --only consent-combination", "used": ["combination-target.json", "combination-combined.json", "consent-combination.json"], "combination_sha": "428beba68ad7ee87644e93fb38bebf988a9fb171", "combination_tree": "4a91c76509d81bff6600147720e6df74510ad2ac"}
+  ],
+  "extra_failed_setup_jobs": ["20261023-015238-291c", "20261023-015557-b5eb"],
+  "long_session_rfc_reproduction": false,
+  "long_session_blocker": "Original RFC K-recency patch, probe, fixture and seed unavailable in inspected sources.",
+  "consent_production_integration": false,
+  "consent_integration_blocker": "Only the synthetic fixture host supplies authenticated source-to-write bindings.",
+  "upstream_suite_run": false,
+  "provider_model_run": false,
+  "live_profiles_used": false
+}
