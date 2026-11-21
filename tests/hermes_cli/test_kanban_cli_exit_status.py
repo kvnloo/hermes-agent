@@ -58,3 +58,18 @@ def test_delegated_child_kanban_cli_refusal_returns_nonzero_exit_status(tmp_path
 
     assert refused.returncode == 1
     assert "delegate_task" in refused.stderr
+
+
+def test_delegated_child_can_list_the_board_it_cannot_mutate(tmp_path):
+    """`kanban list` only reads; the ready refresh before it must not trip the write fence (#148926)."""
+    home = tmp_path / "hermes"
+    home.mkdir()
+    created = _run_hermes(home, "kanban", "create", "visible to the worker", "--json")
+    assert created.returncode == 0, created.stderr
+
+    listed = _run_hermes(home, "kanban", "list", "--json", marker=True)
+
+    assert listed.returncode == 0, listed.stderr
+    assert [row["title"] for row in json.loads(listed.stdout)] == ["visible to the worker"]
+    refused = _run_hermes(home, "kanban", "comment", json.loads(created.stdout)["id"], "x", marker=True)
+    assert refused.returncode == 1  # the fence still holds for real writes

@@ -421,8 +421,12 @@ def _cmd_list(args: argparse.Namespace) -> int:
     if args.mine and not assignee:
         assignee = _profile_author()
     with kbc.connect_closing() as conn:
-        # Cheap mini-dispatch so list reflects dependencies cleared since the last tick.
-        kb.recompute_ready(conn)
+        # Cheap mini-dispatch so list reflects dependencies cleared since the last tick. It writes, so a
+        # fenced delegated child skips it and lists what the dispatcher's own ticks keep fresh (#148926).
+        try:
+            kb.recompute_ready(conn)
+        except PermissionError:
+            pass
         tasks = kb.list_tasks(
             conn, assignee=assignee, status=args.status, tenant=args.tenant, session_id=args.session,
             include_archived=args.archived, order_by=getattr(args, "sort", None),
