@@ -2940,6 +2940,11 @@ class BasePlatformAdapter(_SessionModelSettingsMixin, ABC):
         """Extract ``![alt](url)`` and ``<img src=...>`` image URLs from a response;
         returns ``([(url, alt_text), ...], content with those tags removed)``."""
         md_pattern, html_pattern = MD_IMAGE_TAG_PATTERN, HTML_IMAGE_TAG_PATTERN
+        # Only extract URLs that look like actual images. WeChat CDN images
+        # (mmbiz.qpic.cn/...?wx_fmt=png) and the images.weserv.nl proxy that
+        # fetches them carry no literal extension, so they are matched by host.
+        _IMAGE_URL_MARKERS = ('.png', '.jpg', '.jpeg', '.gif', '.webp', 'fal.media', 'fal-cdn',
+                   'replicate.delivery', 'images.weserv.nl', 'qpic.cn', 'wx_fmt=')
         images = [(m.group(2), m.group(1)) for m in re.finditer(md_pattern, content)
                   if any(m.group(2).lower().endswith(ext) or ext in m.group(2).lower()
                          for ext in _IMAGE_URL_MARKERS)]  # only URLs that look like actual images
