@@ -526,12 +526,11 @@ export default function WebhooksPage() {
           className="flex items-center gap-2 text-muted-foreground"
         >
           <Webhook className="h-4 w-4" />
-          Subscriptions ({subscriptions.length})
+          Routes ({subscriptions.length})
         </H2>
 
         <p className="text-xs text-muted-foreground -mt-1">
-          Subscription changes hot-reload once the webhook receiver is running.
-          Disabled subscriptions reject incoming events.
+          Dynamic subscriptions hot-reload. Routes from config.yaml are read-only.
         </p>
 
         {subscriptions.length === 0 && (
@@ -551,6 +550,7 @@ export default function WebhooksPage() {
                     {sub.name}
                   </span>
                   <Badge tone="outline">{sub.deliver}</Badge>
+                  {sub.source === "config" && <Badge tone="secondary">config.yaml (read-only)</Badge>}
                   {sub.deliver_only && (
                     <Badge tone="secondary">deliver only</Badge>
                   )}
@@ -583,27 +583,29 @@ export default function WebhooksPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-1 shrink-0">
-                <Button
-                  ghost
-                  size="sm"
-                  className="uppercase"
-                  disabled={togglingName === sub.name}
-                  onClick={() => handleToggleEnabled(sub.name, !sub.enabled)}
-                >
-                  {sub.enabled ? "Disable" : "Enable"}
-                </Button>
-                <Button
-                  ghost
-                  destructive
-                  size="icon"
-                  title="Delete"
-                  aria-label="Delete"
-                  onClick={() => webhookDelete.requestDelete(sub.name)}
-                >
-                  <Trash2 />
-                </Button>
-              </div>
+              {sub.source !== "config" && (
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button
+                    ghost
+                    size="sm"
+                    className="uppercase"
+                    disabled={togglingName === sub.name}
+                    onClick={() => handleToggleEnabled(sub.name, !sub.enabled)}
+                  >
+                    {sub.enabled ? "Disable" : "Enable"}
+                  </Button>
+                  <Button
+                    ghost
+                    destructive
+                    size="icon"
+                    title="Delete"
+                    aria-label="Delete"
+                    onClick={() => webhookDelete.requestDelete(sub.name)}
+                  >
+                    <Trash2 />
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}

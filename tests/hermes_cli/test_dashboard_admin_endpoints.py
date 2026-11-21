@@ -366,6 +366,45 @@ class TestWebhookEndpoints:
         self.client, _ = _client()
 
 
+    def test_list_webhooks_uses_gateway_env_and_static_routes(self, monkeypatch):
+        """Regression for NousResearch/hermes-agent#149804."""
+        from hermes_cli.config import load_config, save_config
+        from hermes_cli.webhook import _mutate_subscriptions
+
+        cfg = load_config()
+        cfg.setdefault("platforms", {})["webhook"] = {
+            "extra": {"routes": {
+                "static": {"secret": "static-secret", "events": ["push"], "description": "YAML route"},
+                "shared": {"secret": "config-secret", "events": ["pull_request"]},
+            }},
+        }
+        save_config(cfg)
+        monkeypatch.setenv("WEBHOOK_ENABLED", "true")
+        _mutate_subscriptions(lambda subs: subs.update({
+            "dynamic": {"secret": "dynamic-secret", "events": ["issues"]},
+            "shared": {"secret": "shadowed-secret", "events": ["wrong"]},
+        }))
+
+        response = self.client.get("/api/webhooks")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["enabled"] is True
+        routes = {route["name"]: route for route in data["subscriptions"]}
+        assert set(routes) == {"static", "shared", "dynamic"}
+        assert routes["static"]["source"] == "config"
+        assert routes["static"]["events"] == ["push"]
+        assert routes["static"]["secret_set"] is True
+        assert "secret" not in routes["static"]
+        assert routes["dynamic"]["source"] == "subscription"
+        assert routes["shared"]["source"] == "config"
+        assert routes["shared"]["events"] == ["pull_request"]
+        assert self.client.post("/api/webhooks", json={"name": "static", "deliver": "log"}).status_code == 409
+        assert self.client.post("/api/webhooks", json={"name": "new", "deliver": "log"}).status_code == 200
+
+        cfg["platforms"]["webhook"]["enabled"] = False
+        save_config(cfg)
+        assert self.client.get("/api/webhooks").json()["enabled"] is False
+
     def test_create_webhook_persists_script(self):
         from hermes_cli.config import load_config, save_config
 
