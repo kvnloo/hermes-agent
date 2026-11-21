@@ -78,6 +78,29 @@ afterEach(() => {
 })
 
 describe('persistent browser terminals', () => {
+  it('preserves a host terminal refusal after WebSocket error, with a hint for masked failures', async () => {
+    const api = install()
+    Socket.reply = socket => {
+      socket.onerror?.()
+      socket.close(4403, 'host terminal requires authenticated Webapp')
+    }
+
+    await expect(api.start({ cwd: '/original' })).rejects.toMatchObject({
+      message: 'host terminal requires authenticated Webapp',
+      signal: 'denied'
+    })
+
+    Socket.reply = socket => {
+      socket.onerror?.()
+      socket.close(1006)
+    }
+
+    await expect(api.start({ cwd: '/original' })).rejects.toThrow(
+      'Check the selected gateway and its Webapp terminal access.'
+    )
+    expect(Socket.instances).toHaveLength(2)
+  })
+
   it('consumes an empty replay frame without suppressing the first live output', async () => {
     const api = install()
     const session = await api.start({ cwd: '/original', restoreKey: 'empty-history' })
