@@ -162,9 +162,10 @@ _PROPERTIES: dict[str, Any] = {
         "description": (
             "For input actions (click, type, key, drag, scroll). `background` (DEFAULT) delivers "
             "without raising the window or stealing focus. `foreground` briefly fronts the window "
-            "then restores focus — a visible change needing its own approval; use it only when a "
-            "result's verdict tells you to escalate there. Each result's `verdict` carries the "
-            "next step; follow it rather than guessing."
+            "then restores focus — a visible change needing its own approval. Follow the "
+            "action `verdict`; `verify_fresh_state` requires a fresh capture before retry. "
+            "Foreground is permitted if that fresh capture shows background input had no effect "
+            "(including a pixel no-op), even without an escalation hint. Never repeat confirmed input."
         ),
     },
     "bring_to_front": {
@@ -191,10 +192,11 @@ COMPUTER_USE_SCHEMA: dict[str, Any] = {
         "Drive the desktop via cua-driver: screenshots, mouse, keyboard, scroll, drag. macOS, "
         "Windows, and Linux. Input is background-FIRST, not background-only: the default delivery "
         "routes to the target window without stealing the user's cursor or focus (works even on "
-        "hidden/minimized windows), and when a result's `verdict` says to escalate you climb — "
-        "pixel coordinates, or delivery_mode='foreground' (briefly fronts the window; separate "
-        "approval). Each result carries a `verdict` with the next step; follow it — never repeat "
-        "confirmed input, and re-capture to verify an unverifiable one before retrying. Workflow: "
+        "hidden/minimized windows). Follow the action `verdict`: `verify_fresh_state` "
+        "requires a fresh capture before any retry. If that capture shows background input "
+        "had no effect, escalate via pixel coordinates and then delivery_mode='foreground' "
+        "(briefly fronts the window; separate approval), even without an escalation hint. "
+        "Never repeat confirmed input. Workflow: "
         "action='capture' (mode='som' gives numbered element overlays), then click by `element` "
         "index; re-capture after state-changing actions (or pass capture_after=true). Image "
         "captures include a shareable `screenshot_path`; deliver it via the platform's MEDIA "
