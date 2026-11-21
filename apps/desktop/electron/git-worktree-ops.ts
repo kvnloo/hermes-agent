@@ -411,11 +411,13 @@ async function listBranches(repoPath, gitBin) {
   }
 
   try {
+    // Git can shorten refs/remotes/origin/HEAD to bare "origin", which is not a
+    // branch. Strip exactly refs/<kind>/ so the /HEAD filter sees the alias.
     // Both children own cwd handles: a failed probe must still wait for its
     // sibling before the caller may remove or switch the repository directory.
     const probes = await Promise.allSettled([
-      runGit(gitBin, ['for-each-ref', '--format=%(refname:short)', '--sort=-committerdate', 'refs/heads'], resolved),
-      runGit(gitBin, ['for-each-ref', '--format=%(refname:short)', '--sort=-committerdate', 'refs/remotes'], resolved)
+      runGit(gitBin, ['for-each-ref', '--format=%(refname:lstrip=2)', '--sort=-committerdate', 'refs/heads'], resolved),
+      runGit(gitBin, ['for-each-ref', '--format=%(refname:lstrip=2)', '--sort=-committerdate', 'refs/remotes'], resolved)
     ])
 
     const [local, remote] = probes
@@ -521,11 +523,12 @@ async function listBaseBranches(repoPath, gitBin) {
   }
 
   try {
+    // Keep origin/HEAD explicit in this picker instead of shortening it to origin.
     const out = await runGit(
       gitBin,
       [
         'for-each-ref',
-        '--format=%(refname:short)\t%(committerdate:iso)',
+        '--format=%(refname:lstrip=2)\t%(committerdate:iso)',
         '--sort=-committerdate',
         'refs/heads',
         'refs/remotes'

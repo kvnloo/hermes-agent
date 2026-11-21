@@ -505,6 +505,25 @@ function seedRemoteAndClone(label, branches) {
   return { cloneDir, remoteDir }
 }
 
+test('branch pickers keep remote HEAD aliases out of branch choices', async () => {
+  const { cloneDir, remoteDir } = seedRemoteAndClone('branches-symbolic-head', ['teammate-work'])
+
+  try {
+    const branches = await listBranches(cloneDir, 'git')
+    // An abbreviated symbolic ref can appear as a bare remote name, not a branch.
+    assert.equal(branches.some(b => b.name === 'origin' || b.name.endsWith('/HEAD')), false)
+    assert.ok(branches.some(b => b.name === 'origin/teammate-work' && b.isRemote))
+
+    const bases = await listBaseBranches(cloneDir, 'git')
+    assert.equal(bases.some(b => b.name === 'origin'), false)
+    assert.ok(bases.some(b => b.name === 'origin/HEAD' && b.isRemote))
+    assert.ok(bases.some(b => b.name === 'origin/teammate-work' && b.isRemote))
+  } finally {
+    fs.rmSync(remoteDir, { recursive: true, force: true })
+    fs.rmSync(cloneDir, { recursive: true, force: true })
+  }
+})
+
 test('listBranches: offers remote branches that have no local counterpart', async () => {
   const { cloneDir, remoteDir } = seedRemoteAndClone('branches-remote', ['teammate-work'])
 
