@@ -915,7 +915,7 @@ def judge_goal(
         timeout = _goal_judge_timeout()   # the declared default is the config key, not the constant
 
     try:
-        from agent.auxiliary_client import call_llm
+        from agent.auxiliary_client import InvalidGoalJudgeResponse, call_llm
         from agent.auxiliary_unavailable import AuxiliaryClientUnavailable
     except Exception as exc:
         logger.debug("goal judge: auxiliary client import failed: %s", exc)
@@ -944,6 +944,10 @@ def judge_goal(
 
     try:
         raw = _call_goal_judge_llm(call_llm, JUDGE_SYSTEM_PROMPT, prompt, timeout)
+    except InvalidGoalJudgeResponse:
+        # All configured candidates returned unusable verdicts; keep the parse-failure
+        # auto-pause counter rather than misclassifying this as a transport outage.
+        return "continue", "judge returned invalid verdict JSON (fallbacks exhausted)", True, None, False
     except AuxiliaryClientUnavailable as exc:
         # No client at all (e.g. a dead Nous refresh token): name the cause so the user is sent to
         # re-authenticate, not to context-length / model debugging (#42177). Still fails open.
