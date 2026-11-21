@@ -40,6 +40,52 @@ afterEach(() => {
 })
 
 describe('PromptOverlays', () => {
+  it('answers a Bot Screen install sudo card once while a chat is mounted', async () => {
+    const respond = vi.fn()
+    const deps: ServerRequestContext['deps'] = {
+      activeSessionIdRef: { current: 's1' },
+      sessionInterrupted: () => false,
+      sessionStateByRuntimeIdRef: { current: new Map() },
+      updateSessionState: (_sid, update) => update(createClientSessionState('s1')),
+      upsertToolCall: () => undefined
+    }
+
+    $activeSessionId.set('s1')
+    $gateway.set({ request: vi.fn() } as never)
+    expect(
+      handleServerRequest(
+        {
+          fail: vi.fn(),
+          id: 'bot-screen-install',
+          method: 'display.install.sudo',
+          params: { profile_key: 'pieter' },
+          profile: 'pieter',
+          respond
+        },
+        deps,
+        null
+      )
+    ).toBe(true)
+
+    // The app shell owns sessionless prompts; a live chat may mount its own overlays beside it.
+    render(
+      <I18nProvider configClient={null}>
+        <PromptOverlays sessionId={null} />
+        <PromptOverlays sessionId="s1" />
+      </I18nProvider>
+    )
+
+    expect(screen.getAllByRole('dialog')).toHaveLength(1)
+    const password = screen.getByPlaceholderText('sudo password') as HTMLInputElement
+
+    expect(password.type).toBe('password')
+    fireEvent.change(password, { target: { value: 'test-password' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+
+    await waitFor(() => expect(respond).toHaveBeenCalledExactlyOnceWith({ value: 'test-password' }))
+    expect(hasOpenServerRequest('bot-screen-install')).toBe(false)
+  })
+
   it('shows the full command from the sudo request before accepting a password', () => {
     const command = `sudo install -m 755 '${'/tmp/path segment/'.repeat(24)}helper' /usr/local/bin/helper\n&& sudo /usr/local/bin/helper --version`
     const respond = vi.fn()
