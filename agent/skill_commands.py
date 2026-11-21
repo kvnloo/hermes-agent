@@ -853,10 +853,9 @@ def build_skill_invocation_message(
     return _render_skill_block(loaded, note, task_id, user_instruction=user_instruction, runtime_note=runtime_note)
 
 
-# Stacked slash-skill invocations — `/skill-a /skill-b do XYZ` loads every
-# leading skill (up to _MAX_STACKED_SKILLS). The message reuses the BUNDLE
+# Stacked slash-skill invocations — `/skill-a /skill-b do XYZ` loads
+# every distinct leading installed skill. The message reuses the BUNDLE
 # scaffolding markers so the memory extractor needs no new plumbing.
-_MAX_STACKED_SKILLS = 5
 
 
 def split_stacked_skill_commands(rest: str, *, interactive: bool = False) -> tuple[list[str], str]:
@@ -867,7 +866,7 @@ def split_stacked_skill_commands(rest: str, *, interactive: bool = False) -> tup
     skills are interactive-only and must not resolve here."""
     keys: list[str] = []
     remaining = rest or ""
-    while len(keys) < _MAX_STACKED_SKILLS - 1:
+    while True:
         stripped = remaining.lstrip()
         if not stripped.startswith("/"):
             break
