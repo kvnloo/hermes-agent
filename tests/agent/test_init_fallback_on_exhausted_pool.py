@@ -225,3 +225,44 @@ def test_init_fallback_keeps_codex_responses_for_openai_codex():
         assert agent.model == "gpt-5.4-mini"
         assert agent._fallback_activated is True
         assert agent.api_mode == "codex_responses"
+
+def test_init_codex_fallback_to_anthropic_builds_native_client():
+    """#150445: switching the wire at init must also switch the client SDK."""
+    fb = _mock_client(
+        api_key="anthropic-fallback-test-key",
+        base_url="https://api.anthropic.com",
+    )
+    native = MagicMock(name="native_anthropic_client")
+
+    def fake_resolve(provider, model=None, **_kwargs):
+        if provider == "anthropic":
+            return fb, "claude-sonnet-5-5"
+        return None, None  # exhausted openai-codex primary
+
+    with (
+        patch("agent.auxiliary_client.resolve_provider_client", side_effect=fake_resolve),
+        patch("model_tools.get_tool_definitions", return_value=_make_tool_defs()),
+        patch("model_tools.check_toolset_requirements", return_value={}),
+        patch("agent.process_bootstrap.OpenAI", return_value=MagicMock()),
+        patch("agent.anthropic_adapter.build_anthropic_client", return_value=native) as build_native,
+    ):
+        agent = AIAgent(
+            provider="openai-codex",
+            model="gpt-5.4-mini",
+            api_mode="codex_responses",
+            api_key=None,
+            base_url=None,
+            quiet_mode=True,
+            skip_context_files=True,
+            skip_memory=True,
+            fallback_model=[{"provider": "anthropic", "model": "claude-sonnet-5-5"}],
+        )
+
+    assert agent._fallback_activated is True
+    assert agent.provider == "anthropic"
+    assert agent.api_mode == "anthropic_messages"
+    assert agent.client is None
+    assert agent._anthropic_client is native
+    assert agent._primary_runtime["anthropic_api_key"] == fb.api_key
+    assert agent._primary_runtime["anthropic_base_url"] == str(fb.base_url)
+    build_native.assert_called_once()
