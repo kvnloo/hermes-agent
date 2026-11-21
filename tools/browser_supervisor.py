@@ -506,14 +506,24 @@ class _SupervisorRegistry:
         self._by_task: dict[str, CDPSupervisor] = {}
         self._home_by_task: dict[str, str] = {}  # profile home that started it (``stop_home``)
 
-    def get(self, task_id: str) -> Optional[CDPSupervisor]:
+    def get(self, task_id: str, *, home_key: Optional[str] = None) -> Optional[CDPSupervisor]:
         with self._lock:
+            if home_key is not None and self._home_by_task.get(task_id) != home_key:
+                return None
             return self._by_task.get(task_id)
 
     def _pop(self, task_id: str) -> Optional[CDPSupervisor]:
         with self._lock:
             self._home_by_task.pop(task_id, None)
             return self._by_task.pop(task_id, None)
+
+    def pop_if_current(self, task_id: str, expected: Optional[CDPSupervisor]) -> Optional[CDPSupervisor]:
+        """Detach only the captured supervisor; the caller stops it outside lifecycle locks."""
+        with self._lock:
+            if expected is None or self._by_task.get(task_id) is not expected:
+                return None
+            self._home_by_task.pop(task_id, None)
+            return self._by_task.pop(task_id)
 
     def capture(self, task_id: str, *, timeout: float = 10.0) -> CapturedCDP:
         """Public CDP seam for trusted in-process plugins: a handle pinned to this task's

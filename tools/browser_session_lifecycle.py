@@ -144,8 +144,11 @@ def release_session_backend(cache_key: str, session_info: dict[str, Any]) -> Non
         stop_browser(launcher_key)
 
 
-def cleanup_single_session(cache_key: str) -> None:
+def cleanup_single_session(cache_key: str, *, expected_session: Optional[dict[str, Any]] = None) -> None:
     """Tear down one session by its exact key."""
+    if expected_session is not None:
+        _cleanup_claimed_session(cache_key, expected_session)
+        return
     from tools.browser_session_cdp import stop_cdp_supervisor
     stop_cdp_supervisor(cache_key)  # close our WebSocket BEFORE the backend tears the endpoint down
     bs = _bs()
@@ -155,6 +158,34 @@ def cleanup_single_session(cache_key: str) -> None:
     if session_info:
         release_session_backend(cache_key, session_info)
         logger.debug("Closed browser session %s", cache_key)
+
+
+def _forget_if_current(cache_key: str, expected: dict[str, Any]) -> None:
+    bs = _bs()
+    with bs._cleanup_lock:
+        if bs._active_sessions.get(cache_key) is expected:
+            bs._active_sessions.pop(cache_key)
+            bs._session_last_activity.pop(cache_key, None)
+            bs._session_owner_homes.pop(cache_key, None)
+            bs._cleanup_failures.pop(cache_key, None)
+
+
+def _cleanup_claimed_session(cache_key: str, expected: dict[str, Any]) -> None:
+    from tools.browser_supervisor import SUPERVISOR_REGISTRY
+    bs = _bs()
+    with bs._cleanup_lock:
+        if bs._active_sessions.get(cache_key) is not expected:
+            return
+        supervisor = SUPERVISOR_REGISTRY.pop_if_current(cache_key, expected.get("_idle_supervisor"))
+    # Keep the closing record visible until disposal finishes: a vault must not
+    # mistake a half-closed managed browser for an untracked external endpoint.
+    if supervisor is not None:
+        supervisor.stop()
+    with bs._cleanup_lock:
+        if bs._active_sessions.get(cache_key) is not expected:
+            return
+    release_session_backend(cache_key, expected)
+    _forget_if_current(cache_key, expected)
 
 
 def cleanup_browser(task_id: Optional[str] = None) -> None:
@@ -293,15 +324,18 @@ def _force_reap(cache_key: str) -> None:
         release_session_backend(cache_key, session_info)
 
 
-def _cleanup_one_inactive(cache_key: str, elapsed: int) -> None:
+def _cleanup_one_inactive(cache_key: str, elapsed: int, *, expected_session=None) -> None:
     bs = _bs()
     logger.info("Cleaning up inactive session %s (inactive for %ss)", cache_key, elapsed)
     try:
         with _session_owner_scope(cache_key):
-            cleanup_single_session(cache_key)
-        _forget_session_tracking(cache_key)
+            cleanup_single_session(cache_key, expected_session=expected_session)
+        if expected_session is None:
+            _forget_session_tracking(cache_key)
     except Exception as e:  # health: allow BLE001 -- counted; force-reaped after MAX_INACTIVITY_CLEANUP_FAILURES
         with bs._cleanup_lock:
+            if expected_session is not None and bs._active_sessions.get(cache_key) is not expected_session:
+                return
             failures = bs._cleanup_failures[cache_key] = bs._cleanup_failures.get(cache_key, 0) + 1
         if failures < bs.MAX_INACTIVITY_CLEANUP_FAILURES:
             logger.warning("Error cleaning up inactive session %s (attempt %d/%d): %s",
@@ -310,9 +344,38 @@ def _cleanup_one_inactive(cache_key: str, elapsed: int) -> None:
         logger.error("Browser cleanup failed %d times for %s; force-reaping: %s", failures, cache_key, e)
         try:
             with _session_owner_scope(cache_key):
-                _force_reap(cache_key)
+                if expected_session is None:
+                    _force_reap(cache_key)
+                else:
+                    _cleanup_claimed_session(cache_key, expected_session)
         finally:
-            _forget_session_tracking(cache_key, activity=False)
+            if expected_session is None:
+                _forget_session_tracking(cache_key, activity=False)
+            else:
+                _forget_if_current(cache_key, expected_session)
+
+
+@contextlib.contextmanager
+def _claim_idle_session(cache_key: str, *, expected_session=None):
+    """Serialize idle disposal with vault admission, without holding a lock through either I/O."""
+    bs = _bs()
+    with bs._cleanup_lock:
+        info = bs._active_sessions.get(cache_key)
+        last = bs._session_last_activity.get(cache_key)
+        claimed = (last is not None and time.time() - last > bs.BROWSER_SESSION_INACTIVITY_TIMEOUT
+                   and (expected_session is None or info is expected_session)
+                   and not (info and (info.get("_vault_holds") or info.get("_idle_cleanup"))))
+        if claimed and info is not None:
+            from tools.browser_supervisor import SUPERVISOR_REGISTRY
+            info["_idle_cleanup"] = True
+            info["_idle_supervisor"] = SUPERVISOR_REGISTRY.get(cache_key)
+    try:
+        yield claimed
+    finally:
+        if claimed and info is not None:
+            with bs._cleanup_lock:
+                info.pop("_idle_cleanup", None)
+                info.pop("_idle_supervisor", None)
 
 
 def cleanup_inactive_sessions() -> None:
@@ -321,14 +384,16 @@ def cleanup_inactive_sessions() -> None:
     bs = _bs()
     now = time.time()
     with bs._cleanup_lock:
-        idle = [(key, int(now - last)) for key, last in bs._session_last_activity.items()
+        idle = [(key, int(now - last), bs._active_sessions.get(key)) for key, last in bs._session_last_activity.items()
                 if now - last > bs.BROWSER_SESSION_INACTIVITY_TIMEOUT]
-    for key, elapsed in idle:
+    for key, elapsed, info in idle:
         with _session_owner_scope(key):
             if _human_holds_shared_browser(key):
                 update_session_activity(key)
                 continue
-        _cleanup_one_inactive(key, elapsed)
+        with _claim_idle_session(key, expected_session=info) as claimed:
+            if claimed:
+                _cleanup_one_inactive(key, elapsed, expected_session=info)
 
 
 def _janitor() -> None:
