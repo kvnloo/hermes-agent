@@ -1413,7 +1413,7 @@ _PLATFORM_HINT = (
     "supported, and other files arrive as downloadable documents. You can also include image URLs in markdown "
     "format ![alt](url) and they will be downloaded and sent as native media when possible."
 )
-_SEND_TARGET_RE = re.compile(r"^\s*((?:wxid|gh|v\d+|wm|wb)_[A-Za-z0-9_-]+|[A-Za-z0-9._-]+@chatroom|filehelper)\s*$")
+_SEND_TARGET_RE = re.compile(r"^\s*((?:wxid|gh|v\d+|wm|wb)_[A-Za-z0-9_-]+|[A-Za-z0-9._-]+@(?:chatroom|im\.wechat)|filehelper)\s*$")
 
 
 def register(ctx) -> None:
