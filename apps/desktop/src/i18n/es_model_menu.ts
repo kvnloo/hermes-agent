@@ -10,6 +10,13 @@ export const esModelMenu = {
   removeFavorite: 'Quitar de favoritos',
   favoriteShortcut: '⇧ Clic',
   fast: 'Rápido',
+  turboDescriptions: {
+    turbo: 'Selección automática de modelos',
+    'free-quality': 'Ruta gratuita centrada en la calidad',
+    'free-reasoning': 'Ruta gratuita para razonar',
+    'free-verify': 'Ruta gratuita para verificar',
+    'free-longctx': 'Ruta gratuita para contextos largos'
+  },
   free: 'gratis',
   cacheRead: 'lectura en caché',
   priceTitle: (input: string, output: string, cache: string) =>

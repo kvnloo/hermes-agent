@@ -359,6 +359,13 @@ export const arChrome = {
       removeFavorite: 'إزالة من المفضلة',
       favoriteShortcut: '⇧ نقرة',
       fast: 'سريع',
+      turboDescriptions: {
+        turbo: 'توجيه تلقائي للنماذج',
+        'free-quality': 'مسار مجاني لجودة الإجابات',
+        'free-reasoning': 'مسار مجاني للاستدلال',
+        'free-verify': 'مسار مجاني للتحقق',
+        'free-longctx': 'مسار مجاني للسياقات الطويلة'
+      },
       free: 'مجاني',
       cacheRead: 'قراءة من الذاكرة المؤقتة',
       priceTitle: (input: string, output: string, cache: string) =>

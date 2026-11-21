@@ -49,6 +49,7 @@ import { displayModelName, modelDisplayParts } from '@/lib/model-status-label'
 import { accountResetMs, formatReset, modelResetMs } from '@/lib/provider-limit'
 import { reasoningEffortLabel } from '@/lib/reasoning-effort'
 import { foldIncludes, normalize } from '@/lib/text'
+import { TURBO_ROUTE_IDS, turboRouteId, type TurboRouteId } from '@/lib/turbo-models'
 import { cn } from '@/lib/utils'
 import { $customModels, addCustomModel, customModelCandidate, withCustomModels } from '@/store/custom-models'
 import { $favoriteModels, favoriteModelKey, toggleFavoriteModel } from '@/store/favorite-models'
@@ -207,6 +208,12 @@ interface ProviderGroup {
   provider: ModelOptionProvider
 }
 
+interface TurboRow {
+  family: ModelFamily
+  provider: ModelOptionProvider
+  route: TurboRouteId
+}
+
 function queryErrorMessage(error: unknown): null | string {
   return error ? (error instanceof Error ? error.message : String(error)) : null
 }
@@ -345,6 +352,38 @@ export function ModelCatalogMenu({
 
   const q = normalize(search)
 
+  // This pinned section is a projection of the current gateway's catalog,
+  // never an alternate service or a hard-coded list of selectable models.
+  const turboCatalogRows = useMemo<TurboRow[]>(
+    () =>
+      (providers ?? [])
+        .flatMap(provider =>
+          collapseModelFamilies(provider.models ?? []).flatMap(family => {
+            const route = turboRouteId(provider.slug, family.id)
+
+            return route ? [{ family, provider, route }] : []
+          })
+        )
+        .sort((a, b) => TURBO_ROUTE_IDS.indexOf(a.route) - TURBO_ROUTE_IDS.indexOf(b.route)),
+    [providers]
+  )
+
+  const turboKeys = useMemo(
+    () => new Set(turboCatalogRows.map(({ family, provider }) => favoriteModelKey(provider.slug, family.id))),
+    [turboCatalogRows]
+  )
+
+  // A search must find a route by its human description as well as its id.
+  const turboRows = useMemo(
+    () =>
+      q
+        ? turboCatalogRows.filter(({ family, provider, route }) =>
+            foldIncludes(`${family.id} ${provider.name} ${provider.slug} Turbo ${copy.turboDescriptions[route]}`, q)
+          )
+        : turboCatalogRows,
+    [turboCatalogRows, q, copy.turboDescriptions]
+  )
+
   // In-flight downloads render inside the Local provider group when it
   // exists, else as their own trailing 'Local' group (first download —
   // nothing staged yet, so the catalog has no local provider row).
@@ -369,8 +408,13 @@ export function ModelCatalogMenu({
   // explicit "always show me this one". A search turns the section off — a
   // query means "show me every match", listed in their provider's place.
   const favoriteRows = useMemo(
-    () => (q ? [] : resolveFavoriteRows(pickerProviders, favoriteKeys)),
-    [pickerProviders, favoriteKeys, q]
+    () =>
+      q
+        ? []
+        : resolveFavoriteRows(pickerProviders, favoriteKeys).filter(
+            ({ family, provider }) => !turboKeys.has(favoriteModelKey(provider.slug, family.id))
+          ),
+    [pickerProviders, favoriteKeys, q, turboKeys]
   )
 
   // The same rows are dropped from the provider groups, so no model is ever
@@ -390,8 +434,15 @@ export function ModelCatalogMenu({
         { model: current.model, provider: current.provider },
         shownKeys,
         q ? null : favoriteSet
-      ),
-    [pickerProviders, search, current.model, current.provider, shownKeys, q, favoriteSet]
+      )
+        .map(group => ({
+          ...group,
+          families: group.families.filter(
+            family => !turboKeys.has(favoriteModelKey(group.provider.slug, family.id))
+          )
+        }))
+        .filter(group => group.families.length > 0),
+    [pickerProviders, search, current.model, current.provider, shownKeys, q, favoriteSet, turboKeys]
   )
 
   // Presets are searchable rows like everything else — an unfiltered preset
@@ -408,7 +459,8 @@ export function ModelCatalogMenu({
   // section below it (MoA, custom slug) would sit under two separators.
   // Favorites count: a catalog whose every curated family is starred has
   // groups but no group rows, and the section must still paint.
-  const hasList = !hideCatalog && (groups.length > 0 || shownDownloads.length > 0 || favoriteRows.length > 0)
+  const hasList =
+    !hideCatalog && (turboRows.length > 0 || groups.length > 0 || shownDownloads.length > 0 || favoriteRows.length > 0)
 
   // A typed id no provider lists is still a model to the backend. Offer it as
   // a row per configured provider (the current one first) so a slug the
@@ -495,6 +547,12 @@ export function ModelCatalogMenu({
 
   const kbRows = useMemo<KbRow[]>(
     () => [
+      ...turboRows.map(({ family, provider }): KbRow => ({
+        family,
+        key: `${provider.slug}:${family.id}`,
+        kind: 'family',
+        provider
+      })),
       ...favoriteRows.map(({ family, provider }): KbRow => ({
         family,
         key: `${provider.slug}:${family.id}`,
@@ -521,7 +579,7 @@ export function ModelCatalogMenu({
           }))
         : [])
     ],
-    [favoriteRows, groups, collapsedProviders, search, shownMoaPresets, customSlug, customProviders]
+    [turboRows, favoriteRows, groups, collapsedProviders, search, shownMoaPresets, customSlug, customProviders]
   )
 
   // The row the arrows (or a Shift+Enter star) last put the highlight on,
@@ -756,6 +814,7 @@ export function ModelCatalogMenu({
           {error}
         </DropdownMenuItem>
       ) : groups.length === 0 &&
+        turboRows.length === 0 &&
         favoriteRows.length === 0 &&
         moaPresets.length === 0 &&
         shownDownloads.length === 0 &&
@@ -765,6 +824,30 @@ export function ModelCatalogMenu({
         </DropdownMenuItem>
       ) : hasList ? (
         <div className="max-h-[max(150px,30dvh)] overflow-y-auto py-0.5" ref={listRef}>
+          {/* The Turbo routes are real catalog families and share the ordinary
+              row's favorite, options, keyboard and model-switch behaviour. */}
+          {turboRows.length > 0 ? (
+            <DropdownMenuGroup className="py-0.5">
+              <DropdownMenuLabel className={catalogGroupLabel}>Turbo</DropdownMenuLabel>
+              {turboRows.map(({ family, provider, route }) => (
+                <ModelFamilyRow
+                  controller={controller}
+                  current={current}
+                  defaultEffort={defaultEffort}
+                  description={copy.turboDescriptions[route]}
+                  family={family}
+                  favorite={favoriteSet.has(favoriteModelKey(provider.slug, family.id))}
+                  kbProps={kbRowProps(`${provider.slug}:${family.id}`)}
+                  key={`${provider.slug}:${family.id}`}
+                  loadingModels={loadingModels}
+                  onSelect={selectFamily}
+                  onSubOpenChange={handleSubOpenChange}
+                  provider={provider}
+                  search={search}
+                />
+              ))}
+            </DropdownMenuGroup>
+          ) : null}
           {/* Favorites first — the shortcut the star exists for. The section
               paints nothing with no favorites, and nothing while searching,
               where every match is listed in its provider's place instead. */}
@@ -996,6 +1079,7 @@ interface ModelFamilyRowProps {
   controller: ModelMenuController
   current: ModelChoice
   defaultEffort: string
+  description?: string
   family: ModelFamily
   /** Whether this model is starred — paints the filled star. */
   favorite: boolean
@@ -1020,6 +1104,7 @@ function ModelFamilyRow({
   controller,
   current,
   defaultEffort,
+  description,
   family,
   favorite,
   kbProps,
@@ -1166,16 +1251,23 @@ function ModelFamilyRow({
             <Codicon name={favorite ? 'star-full' : 'star-empty'} size="0.75rem" />
           </button>
         </Tip>
-        <span className={cn('flex min-w-0 flex-1 items-center gap-1.5', limit.tone)}>
-          {decoration.icon !== undefined ? <ModelMenuRowIcon icon={decoration.icon} /> : null}
-          <span className="min-w-0 truncate">
-            <HighlightMatches foldSeparators query={search} text={name} />
+        <span className={cn('flex min-w-0 flex-1 flex-col gap-0.5', limit.tone)}>
+          <span className="flex min-w-0 items-center gap-1.5">
+            {decoration.icon !== undefined ? <ModelMenuRowIcon icon={decoration.icon} /> : null}
+            <span className="min-w-0 truncate">
+              <HighlightMatches foldSeparators query={search} text={name} />
+            </span>
+            {tag ? <ModelChip>{tag}</ModelChip> : null}
+            {decoration.badge ? (
+              <Badge className="shrink-0 uppercase tracking-wide" data-model-menu-row-badge="" size="xs" variant="muted">
+                {decoration.badge}
+              </Badge>
+            ) : null}
           </span>
-          {tag ? <ModelChip>{tag}</ModelChip> : null}
-          {decoration.badge ? (
-            <Badge className="shrink-0 uppercase tracking-wide" data-model-menu-row-badge="" size="xs" variant="muted">
-              {decoration.badge}
-            </Badge>
+          {description ? (
+            <span className="min-w-0 truncate text-[0.625rem] font-normal text-(--ui-text-tertiary)" title={description}>
+              {description}
+            </span>
           ) : null}
         </span>
         <ModelResetBadge time={limit.reset} />

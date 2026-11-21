@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { DropdownMenu, DropdownMenuContent } from '@/components/ui/dropdown-menu'
@@ -83,6 +83,35 @@ function renderPanel(onSelectModel = vi.fn(), onFollowDefaultModel?: () => void)
 
   return { onSelectModel, content }
 }
+
+describe('ModelMenuPanel Turbo routes', () => {
+  it('has no Turbo group without a Semantic Router catalog', async () => {
+    const { content } = renderPanel()
+
+    await content.findByText('DeepSeek Chat')
+    expect(content.queryByText('Turbo')).toBeNull()
+  })
+
+  it('switches through the existing session model selection handler', async () => {
+    getGlobalModelOptions.mockResolvedValue({
+      providers: [
+        ...MOCK_PROVIDERS,
+        { models: ['vllm-sr/free-quality'], name: 'Semantic Router', slug: 'custom:vllm-sr' }
+      ]
+    })
+    const { content, onSelectModel } = renderPanel()
+
+    fireEvent.click(await content.findByText('Free route prioritizing answer quality'))
+
+    await waitFor(() =>
+      expect(onSelectModel).toHaveBeenCalledWith({
+        model: 'vllm-sr/free-quality',
+        provider: 'custom:vllm-sr',
+        sessionId: 'runtime-1'
+      })
+    )
+  })
+})
 
 describe('ModelMenuPanel MoA presets', () => {
   it('selecting a MoA preset switches PERSISTENTLY via onSelectModel (not the one-shot dispatch)', async () => {

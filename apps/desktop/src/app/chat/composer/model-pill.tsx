@@ -6,6 +6,7 @@ import { useSessionView } from '@/app/chat/session-view'
 import { useTourMarker } from '@/app/chat/tour-marker'
 import { ModelMenuCloseContext } from '@/app/shell/model-menu-panel'
 import { isElementInHiddenPane } from '@/components/pane-shell/pane-visibility'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { GlyphSpinner } from '@/components/ui/glyph-spinner'
@@ -14,6 +15,7 @@ import { Tip } from '@/components/ui/tooltip'
 import { useI18n } from '@/i18n'
 import { ChevronDown } from '@/lib/icons'
 import { formatModelPillLabel, providerDisplayName } from '@/lib/model-status-label'
+import { turboRouteId } from '@/lib/turbo-models'
 import { cn } from '@/lib/utils'
 import { $currentModelSource, setModelPickerOpen } from '@/store/session'
 
@@ -148,6 +150,11 @@ export function ModelPill({
       ) : (
         <GlyphSpinner className="opacity-50" spinner="braille" />
       )}
+      {turboRouteId(currentProvider, currentModel) ? (
+        <Badge className="shrink-0 uppercase tracking-wide" data-testid="turbo-model-badge" size="xs" variant="muted">
+          Turbo
+        </Badge>
+      ) : null}
       {pinnedOverride && (
         <span
           aria-label={copy.modelPinned}

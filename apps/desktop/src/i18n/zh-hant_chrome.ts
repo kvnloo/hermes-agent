@@ -260,6 +260,13 @@ export const zhHantChrome = {
       removeFavorite: '從我的最愛移除',
       favoriteShortcut: '⇧ 點擊',
       fast: '快速',
+      turboDescriptions: {
+        turbo: '自動選擇模型',
+        'free-quality': '重視回答品質的免費路由',
+        'free-reasoning': '用於推理的免費路由',
+        'free-verify': '用於驗證的免費路由',
+        'free-longctx': '用於長上下文的免費路由'
+      },
       free: '免費',
       cacheRead: '快取讀取',
       priceTitle: (input: string, output: string, cache: string) =>

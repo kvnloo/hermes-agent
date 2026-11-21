@@ -10,6 +10,13 @@ export const ruModelMenu = {
   removeFavorite: 'Убрать из избранного',
   favoriteShortcut: '⇧ Клик',
   fast: 'Быстрая',
+  turboDescriptions: {
+    turbo: 'Автоматический выбор модели',
+    'free-quality': 'Бесплатный маршрут для качества ответов',
+    'free-reasoning': 'Бесплатный маршрут для рассуждений',
+    'free-verify': 'Бесплатный маршрут для проверки',
+    'free-longctx': 'Бесплатный маршрут для длинного контекста'
+  },
   free: 'бесплатно',
   cacheRead: 'чтение из кэша',
   priceTitle: (input: string, output: string, cache: string) =>
