@@ -43,11 +43,15 @@ COMMANDS: dict[str, tuple[str, str | None]] = {
 }
 
 
-def available_commands_update() -> AvailableCommandsUpdate:
-    return AvailableCommandsUpdate(session_update="available_commands_update", available_commands=[
-        AvailableCommand(name=name, description=description,
-                         input=UnstructuredCommandInput(hint=hint) if hint else None)
-        for name, (description, hint) in COMMANDS.items()])
+def available_commands_update(plugin_commands: dict[str, str] | None = None) -> AvailableCommandsUpdate:
+    """The editor's slash menu: ``COMMANDS`` plus the session's plugin commands (``commands.catalog``
+    ``plugin_commands``, name -> description), which run on the owner through ``slash.exec``."""
+    commands = [AvailableCommand(name=name, description=description,
+                                 input=UnstructuredCommandInput(hint=hint) if hint else None)
+                for name, (description, hint) in COMMANDS.items()]
+    commands += [AvailableCommand(name=name, description=description)
+                 for name, description in sorted((plugin_commands or {}).items()) if name not in COMMANDS]
+    return AvailableCommandsUpdate(session_update="available_commands_update", available_commands=commands)
 
 
 def help_text() -> str:
