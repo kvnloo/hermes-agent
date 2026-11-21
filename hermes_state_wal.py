@@ -6,6 +6,7 @@ Patchable helpers are looked up as module globals at call time, so tests patch `
 from __future__ import annotations
 
 import contextlib
+from collections import OrderedDict
 import functools
 import logging
 import os
@@ -59,7 +60,7 @@ def _mode_from_row(row) -> str:
     return str(row[0]).strip().lower() if row and row[0] is not None else ""
 
 
-def _on_disk_journal_mode(conn: sqlite3.Connection) -> Optional[str]:
+def _read_journal_mode_uncached(conn: sqlite3.Connection) -> Optional[str]:
     """Read the journal mode from the DB header; ``None`` if undeterminable (new DB, or PRAGMA failed) ->
     callers take their fail-closed "refuse to downgrade" branch. ``disk i/o error`` can be transient on
     virtualized block devices (XFS on cloud hosts), so it is retried a few times first."""
@@ -81,6 +82,72 @@ def _on_disk_journal_mode(conn: sqlite3.Connection) -> Optional[str]:
         return str(mode).strip().lower() if mode is not None else None
     logger.debug("_on_disk_journal_mode: retries exhausted on disk read (%s)", last_exc)
     return None
+
+
+# Keep only proven WAL modes. A cached DELETE/unknown result could bypass a
+# lock-failed probe and subsequently authorize a live journal downgrade.
+_JOURNAL_MODE_CACHE_SIZE = 128
+_JOURNAL_MODE_CACHE_TTL_SECONDS = 1.0
+_journal_mode_cache: OrderedDict[tuple, tuple[float, str]] = OrderedDict()
+_journal_mode_cache_lock = threading.Lock()
+
+
+def _journal_mode_file_key(conn: sqlite3.Connection) -> Optional[tuple]:
+    """File identity and sidecar generation; None means use the original SQLite probe.
+
+    Cache only initialized, inode-identifiable file databases. Include DB mtime,
+    ctime and size as well as the WAL sidecar metadata, since journal-mode
+    transitions rewrite the main header even when the -wal file is absent.
+    """
+    db_file = _connection_db_file(conn)
+    if not db_file:
+        return None
+    try:
+        db_stat = os.stat(db_file)
+        if not db_stat.st_ino or db_stat.st_size < 100:
+            return None  # in-memory, fresh 0-page, or no stable inode
+        try:
+            wal_stat = os.stat(db_file + "-wal")
+        except FileNotFoundError:
+            sidecar = None
+        else:
+            sidecar = (wal_stat.st_dev, wal_stat.st_ino, wal_stat.st_mtime_ns,
+                       wal_stat.st_ctime_ns, wal_stat.st_size)
+    except OSError:
+        return None  # stat is not proof of mode; let SQLite decide
+    return (os.path.normcase(os.path.abspath(db_file)),
+            db_stat.st_dev, db_stat.st_ino, db_stat.st_mtime_ns,
+            db_stat.st_ctime_ns, db_stat.st_size, sidecar)
+
+
+def _on_disk_journal_mode(conn: sqlite3.Connection) -> Optional[str]:
+    """Memoize verified WAL for one unchanged file generation, never DELETE/unknown.
+
+    A bounded one-second lifetime limits stale reads if a filesystem fails to
+    update metadata. A cached WAL only takes the existing no-downgrade branch:
+    it cannot authorize a WAL upgrade or DELETE transition. Every miss uses the
+    original four-attempt, transient disk-I/O-error-aware read-only probe.
+    """
+    key = _journal_mode_file_key(conn)
+    if key is not None:
+        now = time.monotonic()
+        with _journal_mode_cache_lock:
+            entry = _journal_mode_cache.get(key)
+            if entry is not None:
+                deadline, mode = entry
+                if now < deadline:
+                    _journal_mode_cache.move_to_end(key)
+                    return mode
+                del _journal_mode_cache[key]
+
+    mode = _read_journal_mode_uncached(conn)
+    if mode == "wal" and key is not None and _journal_mode_file_key(conn) == key:
+        with _journal_mode_cache_lock:
+            _journal_mode_cache[key] = (time.monotonic() + _JOURNAL_MODE_CACHE_TTL_SECONDS, mode)
+            _journal_mode_cache.move_to_end(key)
+            if len(_journal_mode_cache) > _JOURNAL_MODE_CACHE_SIZE:
+                _journal_mode_cache.popitem(last=False)
+    return mode
 
 
 def _apply_wal_size_limit(conn: sqlite3.Connection) -> None:
