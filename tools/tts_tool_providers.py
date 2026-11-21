@@ -337,7 +337,11 @@ def _generate_xai_tts(text: str, output_path: str, tts_config: dict[str, Any]) -
     response = _post_json(f"{base_url}/tts", payload, {
         "Authorization": f"Bearer {api_key}", "Content-Type": "application/json",
         "User-Agent": hermes_xai_user_agent()})
-    response.raise_for_status()
+    try:
+        response.raise_for_status()
+    except Exception:
+        _close_response(response)
+        raise
     return _write_bytes(output_path, _read_tts_response_bytes(response, label="xAI TTS"))
 
 
@@ -423,7 +427,11 @@ def _generate_minimax_tts(text: str, output_path: str, tts_config: dict[str, Any
     response = _post_json(base_url, payload, {
         "Content-Type": "application/json", "Authorization": f"Bearer {runtime.api_key}"})
     if is_t2a_v2:
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except Exception:
+            _close_response(response)
+            raise
         result = _read_tts_response_json(response, label="MiniMax TTS")
         _raise_minimax_api_error(result)
         hex_audio = result.get("data", {}).get("audio", "")
