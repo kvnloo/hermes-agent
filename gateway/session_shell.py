@@ -25,7 +25,9 @@ def handlers(connection):
 
 async def shell_exec(connection, ref, params):
     command = params.get('command')
-    if (set(params) - {'session_id', 'profile', 'command'} or not isinstance(ref.session_id, str)
+    raw_stdout = params.get('raw_stdout', False)
+    if (set(params) - {'session_id', 'profile', 'command', 'raw_stdout'}
+            or not isinstance(raw_stdout, bool) or not isinstance(ref.session_id, str)
             or not ref.session_id or not isinstance(command, str) or not command.strip()):
         raise RuntimeStoreError('invalid_params')
     from gateway.session_busy_controls import authorize
@@ -51,10 +53,10 @@ async def shell_exec(connection, ref, params):
     from tools.approval_detection import detect_dangerous_command, detect_hardline_command
     if detect_hardline_command(command)[0] or detect_dangerous_command(command)[0]:
         raise RuntimeStoreError('dangerous_command')
-    return await asyncio.to_thread(_run, command, policy.cwd)
+    return await asyncio.to_thread(_run, command, policy.cwd, raw_stdout)
 
 
-def _run(command, cwd):
+def _run(command, cwd, raw_stdout=False):
     from agent.redact import redact_sensitive_text
     from hermes_cli._subprocess_compat import windows_hide_flags
     from tools.environments.local import build_subprocess_env
@@ -72,6 +74,9 @@ def _run(command, cwd):
     except OSError:
         raise RuntimeStoreError('command_failed') from None
     # Redact before tailing so a credential crossing the slice boundary cannot survive as fragments.
-    stdout = redact_sensitive_text(result.stdout or '', force=True, redact_url_credentials=True)[-4000:]
+    stdout = result.stdout or ''
+    if not raw_stdout:
+        stdout = redact_sensitive_text(stdout, force=True, redact_url_credentials=True)
+    stdout = stdout[-4000:]
     stderr = redact_sensitive_text(result.stderr or '', force=True, redact_url_credentials=True)[-2000:]
     return {'stdout': stdout, 'stderr': stderr, 'code': result.returncode}
