@@ -423,8 +423,11 @@ def test_gitlock_git_spawns_hide_console_window(monkeypatch, tmp_path):
         assert kwargs.get("creationflags") == _CREATE_NO_WINDOW, cmd
 
 
+@pytest.mark.platforms("windows")
 def test_gitlock_tasklist_probe_hides_console_window(monkeypatch):
-    """The stale-lock tasklist guard flashes on its own under pythonw."""
+    """The psutil-free bootstrap's tasklist fallback must still hide its window."""
+    import sys
+
     from hermes_cli import gitlock
 
     captured = []
@@ -435,7 +438,7 @@ def test_gitlock_tasklist_probe_hides_console_window(monkeypatch):
 
     monkeypatch.setattr(gitlock, "windows_hide_flags", lambda: _CREATE_NO_WINDOW)
     monkeypatch.setattr(gitlock.subprocess, "run", fake_run)
-    monkeypatch.setattr(gitlock.os, "name", "nt")
+    monkeypatch.setitem(sys.modules, "psutil", None)
 
     assert gitlock._git_proc_running() is True
     spawns = _spawns(captured, "tasklist")
