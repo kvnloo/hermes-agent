@@ -187,6 +187,10 @@ class ProviderNotConfiguredError(RuntimeError):
     sibling); the type and the gateway's ``code`` survive rewording.
     """
 
+    def __init__(self, message: str, *, provider: str = ""):
+        super().__init__(message)
+        self.provider = provider
+
 
 def missing_provider_credentials_message(provider_id: str) -> str:
     """The "Provider 'X' is set in config.yaml but …" error for an explicit provider with no credentials.
