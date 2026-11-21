@@ -804,6 +804,15 @@ def _make_redirect_handler(port: int, redirect_uri: str | None = None, redirect_
     when multiple MCP servers run OAuth concurrently (fixes #44588).
     """
     async def _redirect_handler(authorization_url: str) -> None:
+        # The MCP server supplies this URL. Never dispatch a local file or custom
+        # protocol handler, including through the dashboard OAuth flow.
+        try:
+            parsed = urlparse(authorization_url)
+            safe_url = parsed.scheme in ("http", "https") and bool(parsed.netloc)
+        except ValueError:
+            safe_url = False
+        if not safe_url:
+            raise OAuthNonInteractiveError("MCP OAuth authorization URL must use HTTP(S) with a host")
         dashboard_flow = get_dashboard_oauth_flow()
         if dashboard_flow is not None:
             await dashboard_flow.publish_authorization_url(authorization_url)
