@@ -150,6 +150,7 @@ let _scriptIndex = 0
 /** Per-server counter for the sidebar-states script (independent from _scriptIndex). */
 let _sidebarScriptIndex = 0
 let _ephemeralIndex = 0
+let _ephemeralGhIndex = 0
 
 /** Per-server counter for the cross-session sidebar script. */
 let _sidebarCrossIndex = 0
@@ -174,6 +175,7 @@ function resetScriptIndex(): void {
   _scriptIndex = 0
   _sidebarScriptIndex = 0
   _ephemeralIndex = 0
+  _ephemeralGhIndex = 0
   _sidebarCrossIndex = 0
   _queueStopIndex = 0
   _correctionSwitchIndex = 0
@@ -300,6 +302,24 @@ const EPHEMERAL_SCRIPT: ScriptedTurn[] = [
   { text: 'Sam asked to move it. Looking for open slots on Tuesday.', toolCalls: [{ name: 'mcp__google_calendar__find_free_slots', args: { day: 'tuesday', minutes: 30 } }] },
   { text: 'And the repo, in case the demo build is broken.', toolCalls: [{ name: 'mcp__github__get_check_runs', args: { repo: 'acme/web', ref: 'main' } }] },
   { text: 'You are mostly set for the Acme review (sample data): the deck arrived, Tuesday has three open slots, and lint fails on main.' }
+]
+
+export const EPHEMERAL_GH_TRIGGER = 'E2E_EPHEMERAL_GH'
+
+// GitHub through `gh` in the terminal tool (how Hermes' github skills reach it). `|| true` keeps
+// the run green offline; the card comes from the command, not its output.
+const EPHEMERAL_GH_SCRIPT: ScriptedTurn[] = [
+  { text: 'Checking the latest CI runs.', toolCalls: [{ name: 'terminal', args: { command: 'gh run list -R acme/web --limit 3 || true' } }] },
+  { text: 'Done checking CI (sample).' }
+]
+
+export const EPHEMERAL_WRITTEN_TRIGGER = 'E2E_EPHEMERAL_WRITTEN'
+
+// The agent decides to show a card and writes it itself (an `ephemeral-ui` fence), no tool call.
+const EPHEMERAL_WRITTEN_FENCE = "{\"app\": \"github\", \"title\": \"CI on main\", \"status\": \"1 failing\", \"summary\": \"GitHub \\u00b7 CI on main \\u00b7 lint failing\", \"html\": \"<ul style=\\\"margin:0;padding-left:18px\\\"><li data-eui-pick=\\\"lint\\\">lint \\u00b7 failed</li><li data-eui-pick=\\\"unit\\\">unit \\u00b7 passed</li></ul>\"}"
+
+const EPHEMERAL_WRITTEN_SCRIPT: ScriptedTurn[] = [
+  { text: 'CI on main (sample):\n\n```ephemeral-ui\n' + EPHEMERAL_WRITTEN_FENCE + '\n```\n\nLint fails on main; unit tests pass.' }
 ]
 
 const QUEUE_STOP_SCRIPT: ScriptedTurn[] = [
@@ -992,6 +1012,31 @@ export function startMockServer(options: MockServerOptions = {}): Promise<MockSe
             const script = sidebarCrossScript(options.backgroundReleasePath, options.backgroundSilent)
             const turn = script[_sidebarCrossIndex] ?? script[script.length - 1]
             _sidebarCrossIndex++
+
+            if (stream) {
+              streamScriptedTurn(res, model, turn)
+            } else {
+              nonStreamingScriptedTurn(res, model, turn)
+            }
+
+            return
+          }
+
+          if (userText.includes(EPHEMERAL_WRITTEN_TRIGGER)) {
+            const turn = EPHEMERAL_WRITTEN_SCRIPT[0]
+
+            if (stream) {
+              streamScriptedTurn(res, model, turn)
+            } else {
+              nonStreamingScriptedTurn(res, model, turn)
+            }
+
+            return
+          }
+
+          if (userText.includes(EPHEMERAL_GH_TRIGGER)) {
+            const turn = EPHEMERAL_GH_SCRIPT[_ephemeralGhIndex] ?? EPHEMERAL_GH_SCRIPT[EPHEMERAL_GH_SCRIPT.length - 1]
+            _ephemeralGhIndex++
 
             if (stream) {
               streamScriptedTurn(res, model, turn)

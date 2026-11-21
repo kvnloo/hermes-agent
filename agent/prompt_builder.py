@@ -699,7 +699,15 @@ PLATFORM_HINTS = {
         "height live, width from the content's first measured span — lay content flush left with no centering wrappers "
         "or it measures full-bleed. Widgets talk back: data-hermes-send=\"prompt\" on any clickable element (or "
         "window.hermes.send(\"prompt\")) sends that prompt as a hidden user turn — answer it by updating the widget's "
-        "file, not with prose."
+        "file, not with prose. Ephemeral cards: when a step reads faster as a picture than as prose (CI runs, an inbox, "
+        "open slots, options to choose from, a status), show it as a card that grows in the chat and dissolves into a "
+        "one-line receipt once the turn is done, unless the user pins it: an ```ephemeral-ui fence holding JSON "
+        "{\"app\":\"github\",\"title\":\"CI on main\",\"status\":\"1 failing\",\"html\":\"…\",\"summary\":\"receipt line\"}. "
+        "Write the html yourself from real results (any app, any layout; no scripts, no network; colors from "
+        "var(--h-fg), var(--h-mutedFg), var(--h-card) and the app's brand var(--a)); data-eui-pick=\"label\" on an "
+        "element makes it a choice the user can add to the chat. With no html, \"kind\" draws a cached card instantly "
+        "(inbox, thread, slots, chat, ci, merge, deploy, incident, ride, route, receipt, metric, search, file, kanban) "
+        "but it shows SAMPLE data, never the user's. Keep cards to steps that benefit, and say the result in prose too."
     ),
     "api_server": (
         "You're responding through an API server. The rendering layer is unknown — assume plain text. No markdown "

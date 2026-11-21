@@ -4,7 +4,7 @@ export interface EphemeralCardConfig {
   channel: string
   scheme: 'light' | 'dark'
   palette: Record<string, string>
-  card: { kind: string; app: string }
+  card: { kind: string; app: string } & Record<string, string | null | undefined>
   pinned: boolean
 }
 

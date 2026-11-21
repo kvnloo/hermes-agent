@@ -6,7 +6,13 @@
     "composite": true,
     "noEmit": false
   },
-  "files": ["electron/backend-discovery.ts"],
+  "files": [
+    "electron/backend-discovery.ts",
+    "src/components/assistant-ui/ephemeral/document.ts",
+    "src/components/assistant-ui/ephemeral/kit-meta.generated.ts",
+    "src/components/assistant-ui/ephemeral/kit.generated.ts",
+    "src/components/assistant-ui/ephemeral/model.ts"
+  ],
   "include": ["e2e", "playwright.config.ts", "../../tests-js/scripts", "../../tests/install/e2e-assets/desktop-smoke.ts"],
   "exclude": ["src", "electron"]
 }

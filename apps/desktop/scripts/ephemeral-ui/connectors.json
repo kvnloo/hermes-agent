@@ -1,5 +1,5 @@
 {
-  "note": "Which ephemeral-ui card a tool call grows. Keys are MCP server names as Hermes registers them (mcp__<server>__<tool>), normalized to lowercase with '-' for '_'. `tools` is checked in order: the first regex (case-insensitive, tested against the tool name) that matches the tool name picks the card kind; \"\" matches anything. build-kit.mjs checks every app and kind against the vendored kit.",
+  "note": "Which ephemeral-ui card a tool call grows. Keys are MCP server names as Hermes registers them (mcp__<server>__<tool>), normalized to lowercase with '-' for '_'. `tools` is checked in order: the first regex (case-insensitive, tested against the tool name) that matches picks the card kind; a null kind means that call grows no card (admin, lookup and unrelated calls); \"\" matches anything. Rules are written against the servers' real tool names (src/components/assistant-ui/ephemeral/connectors.test.ts). build-kit.mjs checks every app and kind against the vendored kit.",
   "servers": {
     "gmail": {
       "app": "gmail",
@@ -9,12 +9,20 @@
       ],
       "tools": [
         [
-          "^(get|read|open|send|draft|reply|compose)",
+          "(label|filter|attachment)",
+          null
+        ],
+        [
+          "^(search|list|find)",
+          "inbox"
+        ],
+        [
+          "^(get|read|open|send|draft|reply|compose|forward)",
           "thread"
         ],
         [
           "",
-          "inbox"
+          null
         ]
       ]
     },
@@ -25,6 +33,10 @@
         "calendar"
       ],
       "tools": [
+        [
+          "(colou?rs?|accounts?|current-?time|calendars)$",
+          null
+        ],
         [
           "",
           "slots"
@@ -38,7 +50,7 @@
       ],
       "tools": [
         [
-          "^(get|list|rerun|re_run)_?(check|workflow|run|action|job)",
+          "(^actions_|workflow|check_?runs?|check_?suites?|job_logs?|^(get|list|rerun|re_run|cancel)_?(run|job))",
           "ci"
         ],
         [
@@ -46,8 +58,12 @@
           "deploy"
         ],
         [
-          "",
+          "pull_?requests?|^merge",
           "merge"
+        ],
+        [
+          "",
+          null
         ]
       ]
     },
@@ -152,7 +168,7 @@
       "aliases": [],
       "tools": [
         [
-          "^search",
+          "search",
           "search"
         ],
         [
@@ -168,6 +184,26 @@
         [
           "",
           "player"
+        ]
+      ]
+    }
+  },
+  "commands_note": "Cards for apps Hermes reaches through a CLI in the terminal tool instead of MCP (GitHub is not in Hermes' MCP catalog; its github/* skills drive `gh`). Keys are the executable; `subcommands` is checked in order against the command's leading non-flag words (\"run list\", \"pr checks\"), first match wins, null = no card.",
+  "commands": {
+    "gh": {
+      "app": "github",
+      "subcommands": [
+        [
+          "^(run|workflow)( |$)|^pr checks",
+          "ci"
+        ],
+        [
+          "^pr (view|list|status|diff|merge|create|ready|review)",
+          "merge"
+        ],
+        [
+          "",
+          null
         ]
       ]
     }
