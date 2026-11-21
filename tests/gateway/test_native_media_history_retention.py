@@ -1,6 +1,7 @@
-"""A settled native input stays on disk while the transcript still tells a follow-up turn where it
-is saved (dokterdok N28), in whichever spelling the note used, and is bounded by main's 24 h media
-age once settled, as main's document cache cleanup bounded the staging copy the note used to name."""
+"""Platform-inbound media ages out; owner-pasted images remain session-owned.
+
+Platform documents stay during settlement while the transcript names them
+(dokterdok N28), then expire after 24 hours. Local attachments do not."""
 import os
 import time
 
@@ -48,5 +49,43 @@ def test_settled_native_document_named_by_the_transcript_survives_settlement(tmp
         monkeypatch.setattr(media_module, '_last_sweep', {}, raising=False)
         release_admission_media(db, row['admission_id'])
         assert not os.path.exists(retained) and list(_media_root().iterdir()) == []
+    finally:
+        db.close()
+
+
+def test_owner_pasted_image_survives_platform_media_age_sweep(tmp_path, monkeypatch):
+    """A terminal desktop paste is still the owner's file after 25 hours (#150887)."""
+    from gateway.platforms.base import get_image_cache_dir
+    import gateway.session_ingress_media as media_module
+
+    monkeypatch.setenv('HERMES_HOME', str(tmp_path))
+    staged = get_image_cache_dir() / 'pasted.png'
+    staged.parent.mkdir(parents=True, exist_ok=True)
+    staged.write_bytes(b'\x89PNG\r\n\x1a\n' + b'\x00' * 8)
+    owner_media = capture_native_media([staged])
+    retained = owner_media[0]['path']
+    db = SessionDB(db_path=tmp_path / 'state.db')
+    try:
+        db.create_session('owner-chat', source='desktop')
+        db.append_message('owner-chat', 'user', f"Look\n\n[Image attached at: {retained}]")
+        epoch = begin_runtime_epoch(db, instance_id='owner')
+        row = admit_session_input(
+            db, epoch=epoch, principal_id='uid:1000', session_id='owner-chat',
+            request_id='desktop-paste', payload={
+                'text': 'Look',
+                'attachments_v1': {'media': owner_media, 'media_types': ['image/png']},
+            })
+        claim = claim_session_input(db, epoch=epoch, session_id='owner-chat')
+        settle_session_input(
+            db, epoch=epoch, admission_id=row['admission_id'],
+            generation=claim['generation'], outcome='completed')
+        release_admission_media(db, row['admission_id'])
+        assert os.path.isfile(retained)
+
+        old = time.time() - 25 * 3600
+        os.utime(retained, (old, old))
+        monkeypatch.setattr(media_module, '_last_sweep', {}, raising=False)
+        release_admission_media(db, row['admission_id'])
+        assert os.path.isfile(retained), 'an owner paste is not platform-inbound cache'
     finally:
         db.close()
