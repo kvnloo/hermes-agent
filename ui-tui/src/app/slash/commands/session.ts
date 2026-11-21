@@ -395,18 +395,13 @@ export const sessionCommands: SlashCommand[] = [
           ? normalized
           : 'status'
 
-      // Read-aloud ran in the sidecar's own turn; a shared-gateway turn runs on the owner, which
-      // never speaks a TUI reply, so the toggle would say "on" and stay silent.
-      if (action === 'tts' && ctx.gateway.gw?.isCanonical) {
-        return ctx.transcript.sys(t('canonical.controls.notAvailable', 'voice tts'))
-      }
-
       // T9: the shared owner holds a session's voice mode (its /voice handler, per session). The
       // sidecar's voice.toggle flipped the owner's process-global HERMES_VOICE for every chat; run
       // the owner's handler instead and mirror the mode it reports back.
       if (ctx.gateway.gw?.isCanonical && ctx.sid) {
         const sid = ctx.sid
-        const command = normalized === 'on' || normalized === 'off' ? `voice ${normalized}` : 'voice status'
+        const command = normalized === 'on' || normalized === 'off' || normalized === 'tts'
+          ? `voice ${normalized}` : 'voice status'
 
         return void ctx.gateway.gw
           .request<SlashExecResponse>('slash.exec', { command, session_id: sid })
@@ -428,10 +423,9 @@ export const sessionCommands: SlashCommand[] = [
               return
             }
 
-            // Local sessions refuse `/voice tts` (the owner never speaks a TUI reply), so speech
-            // output stays off; the mic mode follows the gateway's per-session state.
+            // Mirror the owner-accepted mode; remote/no-player sessions still receive a refusal.
             ctx.voice.setVoiceEnabled(r.value === 'voice_only' || r.value === 'all')
-            ctx.voice.setVoiceTts(false)
+            ctx.voice.setVoiceTts(r.value === 'all')
           })
           .catch(ctx.guardedErr)
       }

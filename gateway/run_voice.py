@@ -383,10 +383,12 @@ class GatewayVoiceMixin:
         # agent already produced (#90103). Keep /voice scoped to human platforms.
         if getattr(event.source.platform, "value", None) == "a2a":
             return False
-        # A local session's speech plays in its own client: LocalSessionAdapter has no audio delivery,
-        # so an owner-side synthesis would be a paid provider call nobody hears.
+        # Only a ticket-proven co-located TUI with a system player can hear owner-side TTS.
+        # Remote Desktop/TUI and headless local sessions must not synthesize undeliverable audio.
         if event.source.platform == Platform.LOCAL:
-            return False
+            adapter = self._delivery_adapter_for(event.source)
+            if not getattr(adapter, "can_play_host_audio", lambda _chat: False)(event.source.chat_id):
+                return False
         chat_id = event.source.chat_id
         voice_mode = self._voice_mode.get(self._voice_key_for_source(event.source))
         is_voice_input = event.message_type == MessageType.VOICE

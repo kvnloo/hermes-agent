@@ -1,11 +1,9 @@
-"""A local session's ``/voice tts`` must not make the owner synthesize audio.
+"""Owner-side local-session speech must be playable, or never synthesized.
 
 Ink sends ``slash.exec`` ``voice tts``. The messaging handler sets that chat's
 voice mode to ``all`` and every later reply is synthesized, then handed to
-``LocalSessionAdapter``. It inherits the base ``send_voice``, which only posts
-a media-fallback notice through the adapter's no-op ``send``, so the audio is
-dropped. Nothing plays, the provider is still billed, and Ink's ``/voice off``
-does not clear the owner's mode.
+``LocalSessionAdapter``. Without a locally attached TUI and host player, owner-side synthesis would
+drop the audio. A ticket-proven TUI may instead play with the host's speaker.
 
 The gateway daemon is real (``python -m gateway.run``). The model and the TTS
 endpoint are one loopback HTTP server that records every request path.
@@ -36,6 +34,39 @@ class RecordingModel(Model):
             self.wfile.write(payload)
             return
         return super().do_POST()
+
+
+def test_single_host_tui_can_play_but_remote_or_desktop_cannot(monkeypatch):
+    """A locally attached TUI may speak; a remote client must not spend TTS."""
+    from types import SimpleNamespace
+    from unittest.mock import Mock
+
+    import gateway.session_local as session_local
+    from gateway.session_local import LocalSessionAdapter
+    from gateway.session_commands import command_verdict
+    from tools import voice_mode
+
+    adapter = LocalSessionAdapter(SimpleNamespace(runner=None))
+    adapter.policies['local'] = SimpleNamespace(source='tui', client_env_json='{}',
+                                                client_env_remote=False)
+    adapter.policies['remote'] = SimpleNamespace(source='tui', client_env_json='{}',
+                                                 client_env_remote=True)
+    adapter.policies['desktop'] = SimpleNamespace(source='gui', client_env_json='{}',
+                                                  client_env_remote=False)
+    monkeypatch.setattr(voice_mode, '_system_player_candidates', lambda path: [['afplay', path]])
+    monkeypatch.setattr(session_local.shutil, 'which', lambda _binary: '/usr/bin/afplay')
+    played = Mock(return_value=True)
+    monkeypatch.setattr(voice_mode, 'play_audio_file', played)
+
+    assert adapter.can_play_host_audio('local')
+    assert not adapter.can_play_host_audio('remote')
+    assert not adapter.can_play_host_audio('desktop')
+    assert not adapter.can_play_host_audio('unknown')
+    assert command_verdict('voice', 'tts', local_tts=True) == 'control'
+    assert command_verdict('voice', 'tts', local_tts=False) == 'refused'
+    sent = asyncio.run(adapter.send_voice('local', '/tmp/speech.ogg'))
+    assert sent.success
+    played.assert_called_once_with('/tmp/speech.ogg')
 
 
 def test_local_voice_tts_is_refused_and_other_voice_forms_stay():
