@@ -309,8 +309,14 @@ class SessionKernel:
             from tools.code_execution_tool import _kill_process_group
             _kill_process_group(self.proc, escalate=True)
         if self.proc is not None and not _IS_WINDOWS:
-            from hermes_cli.process_identity import release_process_group_once_empty
-            release_process_group_once_empty(self.proc.pid, proc=self.proc)
+            from hermes_cli.process_identity import (
+                release_process_group_once_empty,
+                stop_owned_group_survivors,
+            )
+            if not release_process_group_once_empty(self.proc.pid, proc=self.proc):
+                # The kernel leader can exit on TERM while a cell child ignores it.
+                # The recorded group stays ours until all of its members are gone.
+                stop_owned_group_survivors(self.proc.pid, proc=self.proc, grace=3.0)
         sock, self.server_sock = self.server_sock, None
         try:
             if sock is not None:

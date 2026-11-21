@@ -91,15 +91,23 @@ def test_owner_sigkill_reaps_the_kernel_group_not_a_live_owners(tmp_path):
                 owner.wait(timeout=10)
 
 
-def _kernel_with_cell_child(monkeypatch, tmp_path, child_argv):
-    """A real kernel (spawn registration captured) running a cell that spawned *child_argv*."""
+def _kernel_with_cell_child(monkeypatch, tmp_path, child_argv, *, register_with_supervisor=False):
+    """A real kernel running a cell child; optionally use the actual owner-death supervisor."""
     from hermes_cli import process_identity
     from tools.code_kernel import SessionKernel, _spawn
 
     calls = []
     for verb, name in (("register", "own_process_groups"), ("unregister", "release_process_groups")):
-        monkeypatch.setattr(process_identity, name, lambda pgids, verb=verb: calls.append((verb, list(pgids))))
-    monkeypatch.setattr(process_identity, "register_child", lambda pid, purpose: None)
+        original = getattr(process_identity, name)
+
+        def record(pgids, *, verb=verb, original=original):
+            calls.append((verb, list(pgids)))
+            if register_with_supervisor:
+                original(pgids)
+
+        monkeypatch.setattr(process_identity, name, record)
+    if not register_with_supervisor:
+        monkeypatch.setattr(process_identity, "register_child", lambda pid, purpose: None)
     kernel = SessionKernel(("graceful",))
     _spawn(kernel, task_id="graceful", child_python=sys.executable, child_cwd="",
            sandbox_tools=frozenset(), max_tool_calls=1)
@@ -156,4 +164,30 @@ def test_teardown_keeps_covering_a_cell_child_that_survived_it(monkeypatch, tmp_
         assert calls == [("register", [kernel.proc.pid])], (
             "the group was released while a cell child was still in it")
     finally:
+        _kill(child)
+
+
+@pytest.mark.live_system_guard_bypass
+def test_teardown_sigkills_a_sigterm_ignoring_cell_child(monkeypatch, tmp_path):
+    """Regression for #149526: a dead kernel leader must not disable group escalation."""
+    ready = tmp_path / "ignoring_term"
+    child_code = (
+        "import pathlib, signal\n"
+        "signal.signal(signal.SIGTERM, signal.SIG_IGN)\n"
+        f"pathlib.Path({str(ready)!r}).touch()\n"
+        "signal.pause()\n"
+    )
+    kernel, child, _calls = _kernel_with_cell_child(
+        monkeypatch, tmp_path, [sys.executable, "-c", child_code],
+        register_with_supervisor=True,
+    )
+    try:
+        wait_until(ready.exists, timeout=10, what="cell child to ignore SIGTERM")
+        assert _alive(child)
+        assert os.getpgid(child["pid"]) == kernel.proc.pid
+        kernel.teardown()
+        wait_until(lambda: not _alive(child), timeout=5,
+                   what="SIGTERM-ignoring cell child to die after group SIGKILL")
+    finally:
+        kernel.teardown()
         _kill(child)
