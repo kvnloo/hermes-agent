@@ -136,6 +136,24 @@ def test_scratch_env_follows_home_and_respects_user_tmpdir(tmp_path):
     assert "TMP" not in user_env  # a partially user-set triple is left exactly as found
 
 
+@pytest.mark.platforms("macos")  # launchd's per-user TMPDIR exists only on macOS
+def test_macos_launchd_default_tmpdir_is_redirected_but_a_user_choice_is_kept(tmp_path):
+    """Every macOS process inherits ``TMPDIR=/var/folders/.../T/`` from launchd; honouring it as
+    a user choice left every Mac's temp files outside the pruned scratch dir. That exact default
+    (with or without the trailing slash) is redirected; any other value stays the user's."""
+    os_default = subprocess.run(["getconf", "DARWIN_USER_TEMP_DIR"], capture_output=True, text=True,
+                                check=True).stdout.strip()
+    scratch = str(tmp_path / "cache" / "scratch")
+    for value in (os_default, os_default.rstrip("/")):
+        env = {"HERMES_HOME": str(tmp_path), "TMPDIR": value}
+        assert apply_scratch_tmp_env(env) is True
+        assert env["TMPDIR"] == env["TMP"] == env["TEMP"] == env["HERMES_SCRATCH_DIR"] == scratch
+
+    chosen = {"HERMES_HOME": str(tmp_path), "TMPDIR": str(tmp_path / "fast-disk")}
+    assert apply_scratch_tmp_env(chosen) is False
+    assert chosen["TMPDIR"] == str(tmp_path / "fast-disk")
+
+
 def test_bootstrap_import_exports_scratch_to_process_and_children(tmp_path):
     """``import hermes_bootstrap`` alone makes ``tempfile`` (this process AND a child) land in scratch."""
     env = {k: v for k, v in os.environ.items() if k not in ("TMPDIR", "TMP", "TEMP", "HERMES_SCRATCH_DIR")}
