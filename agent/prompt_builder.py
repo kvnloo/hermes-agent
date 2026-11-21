@@ -1178,11 +1178,20 @@ def _skill_should_show(
     if available_tools is None and available_toolsets is None:
         return True  # no filtering info — show everything
     at, ats = available_tools or set(), available_toolsets or set()
+
+    def has_toolset(name: str) -> bool:
+        if name in ats:
+            return True
+        # MCP servers register under mcp-<name>, with a live registry alias for <name>.
+        from tools.registry import registry
+        canonical = registry.get_toolset_alias_target(name)
+        return canonical in ats if canonical is not None else False
+
     # fallback_for: hide when the primary IS available; requires: hide when a requirement is NOT.
     return not (
-        any(ts in ats for ts in conditions.get("fallback_for_toolsets", []))
+        any(has_toolset(ts) for ts in conditions.get("fallback_for_toolsets", []))
         or any(t in at for t in conditions.get("fallback_for_tools", []))
-        or any(ts not in ats for ts in conditions.get("requires_toolsets", []))
+        or any(not has_toolset(ts) for ts in conditions.get("requires_toolsets", []))
         or any(t not in at for t in conditions.get("requires_tools", []))
     )
 
