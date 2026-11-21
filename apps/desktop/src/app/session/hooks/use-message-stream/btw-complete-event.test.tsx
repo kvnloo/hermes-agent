@@ -2,6 +2,8 @@ import type { GatewayEvent } from '@hermes/shared'
 import { act, cleanup } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { textPart } from '@/lib/chat-messages'
+
 import { type MessageStreamHarness, renderMessageStream } from './test-harness'
 
 const SID = 'session-1'
@@ -41,6 +43,20 @@ describe('btw.complete event', () => {
     expect(message?.role).toBe('system')
     expect(message?.id).toBe('btw-complete-btw_ab12cd')
     expect(stream.text()).toContain('src/main.ts')
+  })
+
+  it('anchors /btw after the last nonlocal row, skipping the slash acknowledgement (#149380)', () => {
+    stream.states.set(SID, {
+      ...stream.state(),
+      messages: [
+        { id: 'settled-reply', role: 'assistant', rowId: 42, parts: [textPart('done')] },
+        { id: 'slash-ack', role: 'system', parts: [textPart('side question started')] }
+      ]
+    })
+
+    emit('btw.complete', { task_id: 'btw_anchor', question: 'where?', text: 'there' })
+
+    expect(lastMessage()).toMatchObject({ noticeAfterId: 'settled-reply', noticeAfterRowId: 42 })
   })
 
   it('keeps another session untouched when the event targets this one', () => {
