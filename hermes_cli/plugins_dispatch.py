@@ -339,10 +339,24 @@ class PluginDispatchMixin:
         callback_name = getattr(cb, "__name__", repr(cb))
         key = (hook_name, getattr(cb, "__module__", ""), getattr(cb, "__qualname__", callback_name),
                type(exc).__name__, str(exc)[:200])
+        # A write the OS refused is an environment fault, not a plugin bug: it must stay visible
+        # after the log line is deduplicated, so every occurrence updates a persistent entry that
+        # `hermes doctor` reports until the path is writable again.
+        from hermes_cli.write_denials import describe, record_write_denial
+        denial = None
+        if isinstance(exc, OSError):
+            denial = record_write_denial(
+                exc, source=f"{surface.lower()} {hook_name} ({getattr(cb, '__module__', '?')}.{callback_name})")
         if key in self._hook_failures_reported:
             logger.debug("%s '%s' callback %s raised again: %s", surface, hook_name, callback_name, exc)
             return
         self._hook_failures_reported.add(key)
+        if denial:
+            logger.warning(
+                "%s '%s' callback %s raised: %s — %s. Recorded in state/write_denials.json; "
+                "`hermes doctor` reports it until the path is writable (repeats are logged at DEBUG)",
+                surface, hook_name, callback_name, exc, describe(denial))
+            return
         logger.warning(
             "%s '%s' callback %s raised: %s (%s provides: %s; identical failures are logged at DEBUG from now on)",
             surface, hook_name, callback_name, exc, surface.lower(), ", ".join(sorted(kwargs)) or "no fields")

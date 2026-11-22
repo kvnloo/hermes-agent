@@ -951,6 +951,11 @@ def write_file_tool(path: str, content: str, task_id: str = "default",
     except Exception as e:
         if _is_expected_write_exception(e):
             logger.debug("write_file expected denial: %s: %s", type(e).__name__, e)
+            from hermes_cli.write_denials import POLICY_DENIED, describe, record_write_denial
+            denial = record_write_denial(e, source="tool write_file", path=getattr(e, "filename", None) or path)
+            if denial == POLICY_DENIED:
+                # The model must see a wall, not a flaky write it should retry.
+                return tool_error(f"{e} — capability_blocked: {describe(denial)}")
         else:
             logger.error("write_file error: %s: %s", type(e).__name__, e, exc_info=True)
         return tool_error(str(e))

@@ -7,7 +7,8 @@ import os
 import subprocess
 from pathlib import Path
 from hermes_cli.doctor_report import (
-    Finding, _fail_and_issue, _section, check_bool, check_info, check_ok, check_warn, doctor_check, ensure_dir,
+    Finding, _fail_and_issue, _section, check_bool, check_fail, check_info, check_ok, check_warn, doctor_check,
+    ensure_dir,
     warn_on_error,
 )
 from hermes_cli.sizefmt import format_bytes as _human_bytes
@@ -666,6 +667,36 @@ def _check_plugins_in_both_lists(should_fix: bool, f: Finding) -> None:
         f.manual_issues.append(f"Plugin '{name}' is in both plugins.enabled and plugins.disabled, so it is off. "
                                f"Turn it on with `hermes plugins enable {name}` (a memory provider also needs "
                                f"memory.provider set), or keep it off with `hermes plugins disable {name}`")
+
+
+@doctor_check("")  # best-effort: a corrupt store must never break doctor
+def _check_write_denials(should_fix: bool, f: Finding) -> None:
+    """Writes the OS refused at runtime (plugin hooks, mailboxes, file tools), re-probed now.
+
+    Runtime callers log a denial once and then deduplicate it; the persistent entry is the only
+    record left. Each recorded path gets a real write probe: still denied fails, writable again
+    reads as resolved (and ``--fix`` forgets it)."""
+    from hermes_cli.write_denials import POLICY_DENIED, describe, forget_write_denials, load_write_denials, probe_write_access
+    rows = load_write_denials()
+    if not rows:
+        return
+    _section("Write Denials Seen at Runtime")
+    resolved = []
+    for row in rows:
+        ok, kind, detail = probe_write_access(row["path"])
+        seen = f"{row.get('source', '?')}, seen {row.get('count', 1)}x"
+        if ok:
+            check_ok(f"{row['path']} is writable again", f"({seen})")
+            resolved.append(row)
+            continue
+        kind = kind or row.get("kind")
+        check_fail(f"{row['path']} denied", f"({kind}; {seen})")
+        hint = ("allow it in the sandbox profile that launches this process, or move the writer to an allowed "
+                "path" if kind == POLICY_DENIED else "fix the path's ownership or mode")
+        f.manual_issues.append(f"Write to {row['path']} is refused ({row.get('source', '?')}): {describe(kind)}. "
+                               f"To repair, {hint}")
+    if resolved and should_fix:
+        forget_write_denials(resolved)
 
 
 @doctor_check("")  # best-effort: profile enumeration must never break doctor

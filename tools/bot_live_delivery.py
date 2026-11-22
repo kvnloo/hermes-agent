@@ -206,7 +206,10 @@ def _prepare(root: Path) -> Path:
         # receipt reads and writes re-enter this lock, so WARNING once per dir and DEBUG after.
         level = logging.DEBUG if root in _warned_unhardened else logging.WARNING
         _warned_unhardened.add(root)
-        log.log(level, "bot_live_delivery: could not harden mailbox directory %s (%s)", root, exc)
+        from hermes_cli.write_denials import describe, record_write_denial
+        denial = record_write_denial(exc, source="bot_live_delivery mailbox", path=root)
+        log.log(level, "bot_live_delivery: could not harden mailbox directory %s (%s)%s", root, exc,
+                f" — {describe(denial)}" if denial else "")
     if created:
         # Only a fresh mailbox dir needs its parents durably linked; the owner's
         # receipt reads and writes re-enter this lock, and two directory fsyncs
