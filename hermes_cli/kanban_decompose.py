@@ -336,8 +336,15 @@ def decompose_task(
     return _apply_fanout(task_id, parsed, routing, audit_author)
 
 
-def list_triage_ids(*, tenant: Optional[str] = None) -> list[str]:
-    """Return task ids currently in the triage column."""
+def list_triage_ids(*, tenant: Optional[str] = None, exclude_loop_escalated: bool = False) -> list[str]:
+    """Return task ids currently in the triage column.
+
+    ``exclude_loop_escalated`` drops cards the unblock-loop breaker parked in
+    triage for a human (:func:`kb.is_loop_escalated`). Automation (the
+    dispatcher's auto-decompose tick) must pass it: re-specifying such a card
+    promotes it straight back to ``ready`` and re-arms the very loop the
+    breaker stopped. Human-invoked sweeps keep the full column.
+    """
     with kbc.connect_closing() as conn:
         rows = kb.list_tasks(conn, status="triage", tenant=tenant, limit=1000)
-    return [row.id for row in rows]
+    return [row.id for row in rows if not (exclude_loop_escalated and kb.is_loop_escalated(row))]

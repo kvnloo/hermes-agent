@@ -1886,6 +1886,9 @@ DEFAULT_CONFIG = {
         # Max triage tasks decomposed per tick, bounding the aux-LLM burst from a bulk load. Excess
         # defers to the next tick.
         "auto_decompose_per_tick": 3,
+        # Per-task run-rate circuit breaker: a card that starts this many runs within an hour is
+        # parked 'blocked' (needs_input) for a human, whatever keeps re-queueing it. 0 = off.
+        "max_runs_per_hour": 20,
         # Running tasks with no heartbeat (last_heartbeat_at) for this many seconds are reclaimed to
         # ready on the next tick; a still-running local worker is terminated first. 0 = off.
         "dispatch_stale_timeout_seconds": 14400,

@@ -113,6 +113,14 @@ VALID_BLOCK_KINDS = {"dependency", "needs_input", "capability", "transient"}
 # Same-reason block -> unblock -> re-block cycles before routing to ``triage``.
 # Counts unblock recurrences, NOT dispatcher failures (``DEFAULT_FAILURE_LIMIT``).
 BLOCK_RECURRENCE_LIMIT = 2
+
+# Per-task run-rate circuit breaker: more than this many runs started inside
+# ``RUN_RATE_WINDOW_SECONDS`` parks the card ``blocked`` (needs_input) for a
+# human, whatever path keeps re-queueing it. 0 disables. Overridable via
+# ``kanban.max_runs_per_hour`` or ``HERMES_KANBAN_MAX_RUNS_PER_HOUR``.
+DEFAULT_MAX_RUNS_PER_HOUR = 20
+RUN_RATE_WINDOW_SECONDS = 3600
+RUN_RATE_BREAKER = "run_rate"
 VALID_WORKSPACE_KINDS = {"scratch", "worktree", "dir"}
 
 
@@ -3170,6 +3178,25 @@ def block_task(
                 "kind": kind, "reason": reason, "classified_in_place": True,
             })
             return True
+        # A human hold on a triage card (typically one the unblock-loop breaker
+        # parked there). Triage is a queue automation may drain, so "stop until
+        # I say so" must be expressible from it: park ``blocked`` with the
+        # typed kind. No run exists to end and the loop counter is kept as-is
+        # (this is a human decision, not a recurrence). ``dependency`` would
+        # land in ``todo`` and auto-promote, so it is refused here.
+        if cur_row["status"] == "triage":
+            if kind is None or kind == "dependency" or expected_run_id is not None:
+                return False
+            if conn.execute(
+                "UPDATE tasks SET status = 'blocked', block_kind = ? "
+                "WHERE id = ? AND status = 'triage'", (kind, task_id),
+            ).rowcount != 1:
+                return False
+            _append_event(conn, task_id, "blocked", {
+                "kind": kind, "reason": reason, "source_status": "triage",
+                "recurrences": int(_row_get(cur_row, "block_recurrences") or 0),
+            })
+            return True
         source_status = _retry_status_for_run(conn, task_id) if cur_row["status"] == "running" else "ready"
         requested_kind = kind
         rekind_reason = None
@@ -3209,6 +3236,101 @@ def block_task(
         _append_event(conn, task_id, event_kind, payload, run_id=run_id)
         blocked_task = get_task(conn, task_id)
     _fire_task_hook("kanban_task_blocked", blocked_task, task_id, run_id, reason=reason)
+    return True
+
+
+def is_loop_escalated(task: Any) -> bool:
+    """True for a ``triage`` card the unblock-loop breaker parked for a human.
+
+    Only :func:`_route_block` puts a card in triage with
+    ``block_recurrences >= BLOCK_RECURRENCE_LIMIT`` (the counter is reset on a
+    successful completion only), so the row alone identifies it. Automation
+    must leave such cards alone; only an explicit human specify/decompose/
+    unblock may move them.
+    """
+    return (getattr(task, "status", None) == "triage"
+            and int(getattr(task, "block_recurrences", 0) or 0) >= BLOCK_RECURRENCE_LIMIT)
+
+
+def resolve_max_runs_per_hour() -> int:
+    """Run-rate breaker limit: ``HERMES_KANBAN_MAX_RUNS_PER_HOUR`` env, then
+    ``kanban.max_runs_per_hour`` config, then :data:`DEFAULT_MAX_RUNS_PER_HOUR`.
+    0 disables the breaker; an invalid value falls back to the default."""
+    raw: Any = os.environ.get("HERMES_KANBAN_MAX_RUNS_PER_HOUR", "").strip() or None
+    if raw is None:
+        try:
+            from hermes_cli.config import load_config_readonly
+            raw = ((load_config_readonly() or {}).get("kanban") or {}).get("max_runs_per_hour")
+        except Exception:
+            raw = None
+    if raw is None:
+        return DEFAULT_MAX_RUNS_PER_HOUR
+    try:
+        val = int(raw)
+    except (TypeError, ValueError):
+        return DEFAULT_MAX_RUNS_PER_HOUR
+    return val if val >= 0 else DEFAULT_MAX_RUNS_PER_HOUR
+
+
+def runs_in_rate_window(conn: sqlite3.Connection, task_id: str, *, now: Optional[int] = None) -> int:
+    """Runs of ``task_id`` started in the last :data:`RUN_RATE_WINDOW_SECONDS`,
+    counting only those after the newest run-rate breaker trip: an operator
+    unblock after a trip buys a fresh budget instead of an instant re-trip."""
+    now = int(time.time()) if now is None else int(now)
+    since = now - RUN_RATE_WINDOW_SECONDS
+    trip = conn.execute(
+        "SELECT MAX(created_at) FROM task_events WHERE task_id = ? AND kind = 'blocked' "
+        "AND CASE WHEN json_valid(payload) THEN json_extract(payload, '$.breaker') END = ?",
+        (task_id, RUN_RATE_BREAKER),
+    ).fetchone()
+    trip_at = _to_epoch(trip[0]) if trip and trip[0] is not None else None
+    if trip_at is not None:
+        since = max(since, trip_at + 1)
+    count = 0
+    # Text stamps sort above every INTEGER, so they come back too; decide on the parsed epoch.
+    for (started,) in conn.execute(
+        # A refused spawn / quota requeue never ran a worker; its cooldown spaces it already.
+        "SELECT started_at FROM task_runs WHERE task_id = ? AND started_at >= ? "
+        "AND COALESCE(outcome, '') NOT IN ('spawn_failed', 'rate_limited')", (task_id, since),
+    ):
+        ts = _to_epoch(started)
+        if ts is not None and ts >= since:
+            count += 1
+    return count
+
+
+def trip_run_rate_breaker(
+    conn: sqlite3.Connection, task_id: str, *, runs: int, limit: int,
+) -> bool:
+    """Park a ``ready``/``review`` card ``blocked`` (needs_input) because it
+    started ``runs`` runs inside the rate window. The ``blocked`` event is
+    sticky (``recompute_ready`` won't promote it) and wakes the owner through
+    the notifier like any block. False when the card already moved."""
+    with write_txn(conn):
+        row = conn.execute(
+            "SELECT status FROM tasks WHERE id = ? AND status IN ('ready', 'review') "
+            "AND claim_lock IS NULL", (task_id,),
+        ).fetchone()
+        if row is None:
+            return False
+        source_status = row["status"]
+        if conn.execute(
+            "UPDATE tasks SET status = 'blocked', block_kind = 'needs_input' "
+            "WHERE id = ? AND status = ? AND claim_lock IS NULL", (task_id, source_status),
+        ).rowcount != 1:
+            return False
+        reason = (
+            f"run-rate breaker: {runs} runs started in the last "
+            f"{RUN_RATE_WINDOW_SECONDS // 60} min (limit {limit}). Parked for a human; "
+            f"unblock to allow another {limit} runs, or raise kanban.max_runs_per_hour."
+        )
+        _append_event(conn, task_id, "blocked", {
+            "kind": "needs_input", "reason": reason, "source_status": source_status,
+            "breaker": RUN_RATE_BREAKER, "runs": runs, "limit": limit,
+            "window_seconds": RUN_RATE_WINDOW_SECONDS,
+        })
+    _log.warning("kanban: run-rate breaker tripped on %s (%d runs/%ds, limit %d)",
+                   task_id, runs, RUN_RATE_WINDOW_SECONDS, limit)
     return True
 
 

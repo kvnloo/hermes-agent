@@ -81,6 +81,10 @@ DEFAULT_RATE_LIMIT_COOLDOWN_SECONDS = 300  # 5 minutes
 # Within this window a GitHub PR URL in a comment blocks re-spawn.
 _RESPAWN_GUARD_PR_WINDOW = 86400  # 24 hours
 
+# ``check_respawn_guard`` reason for the per-task run-rate breaker; the
+# dispatcher parks the card ``blocked`` instead of just skipping it.
+RUN_RATE_GUARD = "run_rate_limit"
+
 _RESPAWN_GUARD_PR_URL_RE = re.compile(
     r"https?://github\.com/[^/\s]+/[^/\s]+/pull/\d+",
     re.IGNORECASE,
@@ -1624,6 +1628,14 @@ def check_respawn_guard(
     if err and latest_outcome != "crashed" and not infrastructure and _RESPAWN_BLOCKER_RE.search(err):
         return "blocker_auth"
 
+    # 2b. Run-rate circuit breaker (both lanes). Path-independent: whatever
+    #     keeps re-queueing the card (auto-specify of loop triage, a rewake
+    #     cron, a crash/reclaim cycle), N runs an hour is a human's call.
+    #     The dispatcher parks it ``blocked`` on this reason.
+    rate_limit = _kb.resolve_max_runs_per_hour()
+    if rate_limit > 0 and _kb.runs_in_rate_window(conn, task_id, now=now) >= rate_limit:
+        return RUN_RATE_GUARD
+
     # Review-lane spawns stop here: a recent completed run and a fresh PR URL
     # are the canonical *inputs* to a review handoff, not duplicate-work signals.
     if lane == "review":
@@ -2109,6 +2121,11 @@ def _dispatch_lane_task(
         # in-memory view) keeps diagnostics and the board state consistent: the task is now legitimately
         # owned by ``kanban.default_assignee``, not "unassigned but secretly routed".
         if not dry_run:
+            if guard_reason == RUN_RATE_GUARD:
+                limit = _kb.resolve_max_runs_per_hour()
+                _kb.trip_run_rate_breaker(
+                    conn, task_id, runs=_kb.runs_in_rate_window(conn, task_id), limit=limit)
+                return False
             with _kb.write_txn(conn):
                 _kb._append_event(conn, task_id, "respawn_guarded", {"reason": guard_reason})
         return False
