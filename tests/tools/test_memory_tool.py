@@ -1068,6 +1068,15 @@ class TestReadAction:
     like the prompt snapshot, with its own failure sentence. Failure responses no longer
     echo `current_entries` — they point here instead."""
 
+    def test_read_dispatches_through_the_registered_handler(self, store):
+        """The model reaches `read` through the registry handler, not `store.read()`."""
+        from tools.registry import registry
+        assert store.add("memory", "dispatch probe")["success"]
+        handler = registry.get_entry("memory").handler
+        result = json.loads(handler({"action": "read", "target": "memory"}, store=store))
+        assert result["success"] is True, result
+        assert result["entries"] == ["dispatch probe"]
+
     def test_read_returns_deduped_stripped_view(self, store):
         mem = store._path_for("memory")
         mem.write_text("  padded entry  \n§\npadded entry\n§\n\nreal entry\n", encoding="utf-8")
