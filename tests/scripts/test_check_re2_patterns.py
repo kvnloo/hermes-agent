@@ -174,3 +174,18 @@ def test_no_argument_run_finds_the_repo_root(tmp_path):
     summary = proc.stdout.strip().splitlines()[-1]
     assert summary.startswith("checked ")
     assert int(summary.split()[1]) >= 1
+
+
+@pytest.mark.parametrize(
+    "call",
+    [
+        "re.sub(rb'a*?', b'X', b'aa', count=1)",
+        "re.subn(rb'a*?', b'X', b'aa', 1)",
+        "re.split(rb'a*?', b'aa', maxsplit=1)",
+        "re.split(rb'a*?', b'aa', -1)",
+    ],
+    ids=["sub-keyword", "subn-positional", "split-keyword", "split-negative"],
+)
+def test_gate_preserves_literal_operation_limit(tmp_path, call):
+    code, out = _gate(tmp_path, f"import hermes_re as re\n{call}\n")
+    assert code == 0, out
