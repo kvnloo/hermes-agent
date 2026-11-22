@@ -282,6 +282,17 @@ def _resolve_request_runtime_agent_kwargs(provider: str, target_model: Optional[
         "credential_pool": runtime.get("credential_pool")}
 
 
+# The generic virtual model every Hermes client knows (gateway/run_turn.py's proxy and wake.py send it
+# literally). A named profile ADVERTISES its own name instead, so "hermes-agent" must stay a virtual alias
+# there too — otherwise it is treated as a raw provider model id and forwarded upstream (HTTP 404).
+DEFAULT_VIRTUAL_MODEL = "hermes-agent"
+
+
+def is_virtual_model(model: Any, advertised: Optional[str] = None) -> bool:
+    """True when ``model`` names this gateway (its advertised id or the generic default), not a provider model."""
+    return isinstance(model, str) and bool(model) and model in {advertised or DEFAULT_VIRTUAL_MODEL, DEFAULT_VIRTUAL_MODEL}
+
+
 def _request_agent_overrides(
     body: Any, *, virtual_model: Optional[str] = None, allow_bare_model: bool = True
 ) -> dict[str, Any]:
@@ -299,7 +310,7 @@ def _request_agent_overrides(
     if provider:
         overrides["requested_provider"] = provider
     model = _clean_request_string(body.get("model"))
-    if model and model != virtual_model and (provider or allow_bare_model):
+    if model and not is_virtual_model(model, virtual_model) and (provider or allow_bare_model):
         overrides["requested_model"] = model
     model_options = body.get("model_options")
     if isinstance(model_options, dict):
@@ -1821,7 +1832,7 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
         """The model persisted on a session row, minus the virtual alias (replaying
         "hermes-agent" upstream as a provider model id 400s)."""
         stored = session.get("model") if isinstance(session, dict) else None
-        if not stored or stored == self._model_name:
+        if not stored or is_virtual_model(stored, self._model_name):
             return None
         return stored
 
@@ -1871,7 +1882,7 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
         route = dict(alias_route) if isinstance(alias_route, dict) else None
         # The virtual alias is not a provider model id: null it upstream of route-building and
         # every "requested" dict so it is never persisted or misread as a raw override.
-        if model == self._model_name:
+        if is_virtual_model(model, self._model_name):
             model = None
         route_source = "model_routes" if route else "global"
         if not route and model:
@@ -2096,14 +2107,14 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
         if not model:
             _recovered = (self._last_resolved_model.get(_resolved_key)
                           or self._last_resolved_model.get("*"))
-            if _recovered and _recovered != self._model_name:
+            if _recovered and not is_virtual_model(_recovered, self._model_name):
                 logger.warning(
                     "Empty model resolved for session=%s — recovering "
                     "last-known-good model %s (config read likely returned "
                     "empty; see #35314)",
                     _resolved_key, _recovered)
                 model = _recovered
-        elif model != self._model_name:
+        elif not is_virtual_model(model, self._model_name):
             if _resolved_key:
                 self._last_resolved_model[_resolved_key] = model
             self._last_resolved_model["*"] = model
