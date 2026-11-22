@@ -150,7 +150,6 @@ export async function getHistoryRunning(owner: AgentSettingsOwner): Promise<Set<
 }
 
 const HOUR_S = 3_600
-const DAY_S = 86_400
 
 /** The table's "Last active": recent activity reads relative ("4 min. ago", "3 hr. ago",
  *  "Yesterday"), older activity a short date ("Oct 30"); the caller shows `absolute` on hover. */
@@ -165,14 +164,16 @@ export function historyLastActive(
   const relative = new Intl.RelativeTimeFormat(locale, { numeric: 'auto', style: 'short' })
   const today = new Date(nowMs)
   today.setHours(0, 0, 0, 0)
-  const days = Math.ceil((today.getTime() / 1000 - seconds) / DAY_S)
+  // Compare local midnights, not elapsed 24-hour intervals: a date may span 23 or 25 hours.
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
 
   const label =
     age < HOUR_S
       ? relative.format(-Math.max(1, Math.round(age / 60)), 'minute')
-      : days <= 0
+      : date >= today
         ? relative.format(-Math.round(age / HOUR_S), 'hour')
-        : days === 1
+        : date >= yesterday
           ? relative.format(-1, 'day')
           : date.toLocaleDateString(locale, {
               month: 'short',
