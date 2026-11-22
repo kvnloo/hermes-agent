@@ -33,6 +33,7 @@ child's programs before its next step.
 """
 from __future__ import annotations
 
+import operator
 import os
 import sys
 import types
@@ -299,6 +300,7 @@ class Pattern:
 
     def _one(self, kind, string, pos, endpos):
         """One match attempt. ``kind``: 0 search, 1 match, 2 fullmatch."""
+        pos, endpos = operator.index(pos), operator.index(endpos)  # stdlib takes any __index__ object
         data, mode, start, end, offsets, shift, _ = self._open(string, pos, endpos)
         if start > end:
             return None
@@ -358,6 +360,7 @@ class Pattern:
                 start = step(data, last)
 
     def finditer(self, string, pos=0, endpos=sys.maxsize):
+        pos, endpos = operator.index(pos), operator.index(endpos)
         data, mode, start, end, offsets, shift, _ = self._open(string, pos, endpos)  # argument errors raise now
         return (Match(self, string, data, mode, spans, pos, endpos, offsets, shift)
                 for spans in self._spans(data, mode, start, end))
@@ -379,6 +382,7 @@ class Pattern:
         return standin, False
 
     def findall(self, string, pos=0, endpos=sys.maxsize):
+        pos, endpos = operator.index(pos), operator.index(endpos)
         data, mode, start, end, offsets, _, source = self._open(string, pos, endpos)
         take, raw = self._texts(source, data, mode, offsets)
         empty = b"" if raw else ("" if self._is_str else b"")  # raw: UTF-8 bytes, decoded at the end
