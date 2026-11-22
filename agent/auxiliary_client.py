@@ -4425,7 +4425,11 @@ def _discovery_chain_allowed(main_provider: str, task: Optional[str] = None) -> 
     compression silently charged to a Nous Portal balance)."""
     if (main_provider or "").strip().lower() in {"", "auto"}:
         return True
-    logger.warning(
+    # Already benched (needs re-auth / out of credit): the mark logged the actionable WARNING once;
+    # repeating this one on every background tick is the noise that buried it.
+    benched = _is_provider_unhealthy(_normalize_chain_label(main_provider))
+    logger.log(
+        logging.DEBUG if benched else logging.WARNING,
         "Auxiliary %s: main provider %s is unavailable and no fallback_chain / fallback_providers is "
         "configured — refusing to guess another logged-in provider. Re-authenticate (`hermes model`) "
         "or declare a fallback.", task or "call", main_provider)
@@ -7673,6 +7677,22 @@ def _next_fallback_after_quarantine(
     return fb
 
 
+_AUX_REAUTH_REASON_PREFIX = "needs re-auth"
+
+
+def _bench_provider_needing_reauth(route: _LadderRoute, failure: aux_errors.Failure) -> None:
+    """An auth error survived the credential rungs (refresh, pool rotation) and every fallback: the
+    provider cannot serve auxiliary work until the owner logs in again. Bench it for the unhealthy TTL so
+    background callers (kanban decomposer, titles, cron) skip it instead of re-sending the dead login once
+    per tick, and say so ONCE at WARNING with the provider's own message (which names the login command)."""
+    sender = _failure_sender(route, failure)
+    provider = _classification_provider(sender, route.resolved_provider, route.main_runtime)
+    if _normalize_aux_provider(provider) in {"", "auto"}:
+        return
+    detail = " ".join(str(failure.error).split())[:300]
+    _mark_provider_unhealthy(provider, base_url=route.base_info, reason=f"{_AUX_REAUTH_REASON_PREFIX}: {detail}")
+
+
 def _ladder_provider_fallback(failure: aux_errors.Failure, route: _LadderRoute, *, rung_spent: bool = False):
     """Last rung: other providers (per-task chain; then auto: main fallback chain + discovery
     chain, explicit: main-agent-model net). Returns the response or None.
@@ -7761,6 +7781,8 @@ def _ladder_provider_fallback(failure: aux_errors.Failure, route: _LadderRoute, 
     logger.warning("Auxiliary %s%s: %s on %s and all fallbacks exhausted "
                    "(fallback_chain + main agent model). Raising the primary error.",
                    task or "call", tag, reason, resolved_provider)
+    if reason == aux_errors.AUTH_ERROR:
+        _bench_provider_needing_reauth(route, failure)
     if primary_route is not None and route.route_info is not None:
         route.route_info.update(primary_route)
     return None
