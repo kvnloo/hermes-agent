@@ -53,6 +53,7 @@ from hermes_cli.doctor_state import (
     _check_checkpoint_store,
     _check_cron_store,
     _check_directory_structure,
+    _check_health_ledger,
     _check_memory_provider,
     _check_plugins_disabled_by_update,
     _check_plugins_in_both_lists,
@@ -129,7 +130,7 @@ DOCTOR_CHECKS = (
     ('Memory Provider', _check_memory_provider), (None, _check_plugins_disabled_by_update),
     (None, _check_plugins_in_both_lists),
     ('NeMo Relay Plugins', _check_relay_plugins),
-    (None, _check_profiles),
+    (None, _check_profiles), (None, _check_health_ledger),
 )
 
 

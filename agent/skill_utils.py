@@ -499,8 +499,13 @@ def resolve_skill_catalog(entries: list[dict[str, Any]]) -> list[dict[str, Any]]
             if higher and key not in _SHADOW_CHECKED:
                 _SHADOW_CHECKED.add(key)
                 if not any(provably_same_skill([e["path"], out[j]["path"]]) for j in higher):
-                    logger.warning("Skill '%s' at %s is shadowed by a higher-precedence copy "
-                                   "(project > local > create_dir > external_dirs)", name, e["path"])
+                    # A stable fact about the configuration: once per day per profile, not once per
+                    # process — kanban workers and TUI turns each start a fresh process, so the
+                    # in-memory set alone re-warned on every turn.
+                    from hermes_health import warn_once
+                    warn_once(logger, "skill_shadowed", "\0".join(key),
+                              "Skill '%s' at %s is shadowed by a higher-precedence copy "
+                              "(project > local > create_dir > external_dirs)", name, e["path"])
         elif winner[name] == i:
             e.update(status="unique", load_name=name)
         else:

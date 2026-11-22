@@ -2357,6 +2357,21 @@ def note_fire_forward_failure(job_id: str, detail: str) -> bool:
     return _with_job(job_id, apply, False)
 
 
+def _note_run_health(job: dict[str, Any], success: bool, cancelled: bool) -> None:
+    """Mirror a run's failure into the per-home health ledger (``hermes doctor`` "Still failing"),
+    so an erroring job is visible outside jobs.json; a successful run resolves it."""
+    import hermes_health
+    job_id = str(job.get("id") or "")
+    if not job_id or cancelled:
+        return
+    if success:
+        hermes_health.resolve("cron_job_error", job_id)
+        return
+    detail = (job.get("last_failure") or {}).get("detail") or job.get("last_status") or "run failed"
+    hermes_health.record("cron_job_error", job_id,
+                         f"cron job {job.get('name') or job_id} ({job_id}): {str(detail)[:300]}")
+
+
 def _record_run_outcome(
     job: dict[str, Any], success: bool, error: Optional[str], delivery_error: Optional[str],
     status: Optional[str], now: str,
@@ -2389,6 +2404,7 @@ def _record_run_outcome(
         # call. Delivery failures keep their own sticky last_delivery_error.
         job["last_failure"] = {"at": now, "detail": jobs_error_text.sanitize_persisted_error(error) or (status or "run failed")}
     job["last_delivery_error"] = jobs_error_text.sanitize_persisted_error(delivery_error)
+    _note_run_health(job, success, cancelled)
     # Clear both claims: the run is over, so the job is claimable again.
     job["fire_claim"] = None
     job.pop("pending_slot", None)

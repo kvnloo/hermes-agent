@@ -1126,7 +1126,10 @@ def _commit_tool_result(
                 function_name, function_args, function_result, failed=is_error, tool_call_id=tool_call_id,
             )
         if is_error:
-            logger.warning("Tool %s returned error (%.2fs): %s", function_name, tool_duration, error_preview(function_result))
+            # A tool error is a normal, model-visible outcome (the model gets the result and
+            # reacts); it is counted by observe_tool_outcome above. errors.log (WARNING+) is for
+            # harness failures, and ~1,400 routine tool errors there buried them — so INFO.
+            logger.info("Tool %s returned error (%.2fs): %s", function_name, tool_duration, error_preview(function_result))
         elif success_log_chars is not None:
             logger.info("tool %s completed (%.2fs, %d chars)", function_name, tool_duration, success_log_chars)
         if not blocked:

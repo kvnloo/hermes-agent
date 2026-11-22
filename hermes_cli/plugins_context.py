@@ -552,7 +552,12 @@ class PluginContext(PluginCapabilityCtxMixin, PluginIdleTaskCtxMixin):
             return
         launch_scope = _facade().hermes_home_key(_facade().get_process_hermes_home())
         if self._manager.scope_key != launch_scope:
-            _facade().logger.warning(
+            # Fires on every profile-scoped plugin load (each profile, each start): a config fact,
+            # so once per day per profile home rather than once per load.
+            from hermes_health import warn_once
+            warn_once(
+                _facade().logger, "dashboard_auth_profile_scope",
+                f"{self.manifest.name}\0{provider.name}\0{self._manager.scope_key}",
                 "Plugin '%s' tried to register dashboard-auth provider %r "
                 "from profile scope %s; ignoring it because dashboard auth "
                 "is owned by launch scope %s.",

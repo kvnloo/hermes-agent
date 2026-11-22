@@ -339,6 +339,11 @@ class PluginDispatchMixin:
         callback_name = getattr(cb, "__name__", repr(cb))
         key = (hook_name, getattr(cb, "__module__", ""), getattr(cb, "__qualname__", callback_name),
                type(exc).__name__, str(exc)[:200])
+        # Demoting repeats to DEBUG must not make a still-failing hook invisible: every failure
+        # (first and repeat) is counted in the persistent health ledger that `hermes doctor` reads.
+        from hermes_health import record
+        record("plugin_hook_failure", "\0".join(key),
+               f"{surface} '{hook_name}' callback {callback_name} raised {type(exc).__name__}: {str(exc)[:300]}")
         if key in self._hook_failures_reported:
             logger.debug("%s '%s' callback %s raised again: %s", surface, hook_name, callback_name, exc)
             return

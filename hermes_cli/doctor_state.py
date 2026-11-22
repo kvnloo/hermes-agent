@@ -703,3 +703,33 @@ def _check_profiles(should_fix: bool, f: Finding) -> None:
     for line in duplicate_credential_findings():
         check_warn("Duplicate platform credential across profiles", f"({line})")
         f.manual_issues.append(line)
+
+
+@doctor_check("")  # best-effort: a corrupt ledger must never break doctor
+def _check_health_ledger(should_fix: bool, f: Finding) -> None:
+    """Conditions the runtime recorded in ``logs/health.json``: harness paths that are STILL failing
+    (hook raising on every call, cron job erroring — repeats are DEBUG in the logs, so this is where
+    they stay visible) and once-per-day configuration notices (shadowed skills, slash collisions)."""
+    import time
+    import hermes_health
+    from hermes_cli.doctor import HERMES_HOME
+    rows = hermes_health.conditions(home=HERMES_HOME)
+    if not rows:
+        return
+    _section("Health Ledger")
+    now = time.time()
+    failing = hermes_health.active_failures(home=HERMES_HOME, now=now)
+    for r in failing:
+        ago = int(max(0, now - float(r.get("last_seen", now))) // 60)
+        check_warn(f"Still failing: {r.get('summary', r.get('kind'))}",
+                   f"({r.get('count', 0)}x since first seen; last {ago} min ago)")
+        f.manual_issues.append(f"{r.get('kind')}: {r.get('summary')}")
+    notices = [r for r in rows if r.get("severity") == hermes_health.NOTICE]
+    by_kind: dict = {}
+    for r in notices:
+        by_kind.setdefault(r.get("kind", "?"), []).append(r)
+    for kind, items in sorted(by_kind.items()):
+        check_info(f"{kind}: {len(items)} condition(s), {sum(int(i.get('count', 0)) for i in items)} occurrence(s) "
+                   f"— e.g. {items[0].get('summary', '')[:160]}")
+    if not failing:
+        check_ok("No harness failure recorded in the last 24h")

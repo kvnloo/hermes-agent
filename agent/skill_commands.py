@@ -401,8 +401,10 @@ def _scan_skill_md(skill_md: Path, disabled: set, seen_names: set, commands: dic
     # A collision with a core command (name or alias) skips auto-registration; the skill stays
     # loadable via /skill <name>. The same predicate feeds the /skills + palette notes.
     if skill_command_collision_note(name) is not None:
-        logger.warning("Skill %r generates slash command '/%s' which collides with a core Hermes command; "
-                       "skipping auto-registration. Use '/skill %s' instead.", name, cmd_name, name)
+        from hermes_health import warn_once
+        warn_once(logger, "skill_slash_collision", f"{name}\0{skill_md}",
+                  "Skill %r generates slash command '/%s' which collides with a core Hermes command; "
+                  "skipping auto-registration. Use '/skill %s' instead.", name, cmd_name, name)
         return
     # Dedup on the slug too: "git_helper" and "git-helper" normalize the same.
     # First-wins preserves project > local > external precedence.
