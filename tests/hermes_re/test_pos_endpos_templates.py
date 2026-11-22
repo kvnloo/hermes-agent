@@ -73,3 +73,26 @@ def test_callable_replacement_count_and_maxsplit():
     assert hre.split(",", "a,b,c", maxsplit=1) == ["a", "b,c"]
     assert hre.split(r"(,)|(;)", "a,b;c") == std.split(r"(,)|(;)", "a,b;c")
     assert hre.search(r"(?P<n>\w)(\d)?", "a").expand(r"\g<n>-\2-") == "a--"
+
+
+class _Offset:
+    """An integer-like position (numpy integers, IntEnum members): stdlib reads it via ``__index__``."""
+
+    def __init__(self, value):
+        self.value = value
+
+    def __index__(self):
+        return self.value
+
+
+def test_pattern_methods_accept_index_protocol_for_bounds():
+    mine, ref = hre.compile(r"\w"), std.compile(r"\w")
+    text = "caf\u00e9 ab"
+    for pos, end in ((_Offset(1), 6), (0, _Offset(4)), (_Offset(2), _Offset(5)), (_Offset(-3), _Offset(99))):
+        for name in ("search", "match", "fullmatch"):
+            a, b = getattr(ref, name)(text, pos, end), getattr(mine, name)(text, pos, end)
+            assert view(a) == view(b), (name, pos, end)
+            if a is not None:
+                assert (a.pos, a.endpos) == (b.pos, b.endpos)
+        assert ref.findall(text, pos, end) == mine.findall(text, pos, end)
+        assert [m.span() for m in ref.finditer(text, pos, end)] == [m.span() for m in mine.finditer(text, pos, end)]
