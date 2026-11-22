@@ -7,6 +7,7 @@ Covers three static methods on AIAgent (inspired by PR #1321 — @alireza78a):
   - _uniquify_tool_call_ids()   — Phase 2c: duplicate-id repair (lossless pairing)
 """
 
+import json
 import types
 
 import pytest
@@ -239,6 +240,24 @@ class TestDeduplicateToolCalls:
 
         assert out == [first, distinct]
 
+
+    @pytest.mark.parametrize("args", [
+        '{"action":"key","keys":"tab"}',
+        '{"action":"scroll","direction":"down"}',
+        '{"action":"click","element":3}',
+        '{"action":"type","text":"0"}',
+    ])
+    def test_repeated_computer_use_inputs_are_preserved_in_order(self, args):
+        first = make_tc("computer_use", args)
+        second = make_tc("computer_use", json.dumps(dict(reversed(list(json.loads(args).items())))))
+
+        assert AIAgent._deduplicate_tool_calls([first, second]) == [first, second]
+
+    def test_duplicate_computer_use_capture_still_deduplicates(self):
+        first = make_tc("computer_use", '{"action":"capture","mode":"som"}')
+        second = make_tc("computer_use", '{"mode":"som","action":"capture"}')
+
+        assert AIAgent._deduplicate_tool_calls([first, second]) == [first]
 
     def test_empty_list_safe(self):
         assert AIAgent._deduplicate_tool_calls([]) == []

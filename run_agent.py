@@ -1254,16 +1254,24 @@ class AIAgent(
     @staticmethod
     def _deduplicate_tool_calls(tool_calls: list) -> list:
         """Drop duplicate (tool_name, arguments) pairs in one turn (first wins). Valid JSON arguments are
-        canonicalized so key order/whitespace can't evade dedup; returns the original list when nothing was removed."""
+        canonicalized so key order/whitespace can't evade dedup; returns the original list when nothing was removed.
+        ``computer_use`` is the exception: every action except ``capture`` (the schema's only side-effect-free
+        one) is an ordered GUI input, so Tab-Tab, scroll-scroll or click-click on a stepper must all run."""
         seen, unique = set(), []
         for tc in tool_calls:
             arguments = tc.function.arguments
+            parsed = None
             try:
-                arguments = json.dumps(json.loads(arguments), separators=(",", ":"), sort_keys=True)
+                parsed = json.loads(arguments)
+                arguments = json.dumps(parsed, separators=(",", ":"), sort_keys=True)
             except (TypeError, ValueError):
                 pass
             key = (tc.function.name, arguments)
-            if key in seen:
+            ordered_gui_input = (
+                tc.function.name == "computer_use" and isinstance(parsed, dict)
+                and str(parsed.get("action") or "").strip().lower() != "capture"
+            )
+            if key in seen and not ordered_gui_input:
                 logger.warning("Removed duplicate tool call: %s", tc.function.name)
                 continue
             seen.add(key)
