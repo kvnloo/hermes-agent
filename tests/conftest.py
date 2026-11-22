@@ -474,6 +474,20 @@ def _neutralize_kanban_memory_guard(request, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _neutralize_disk_guard(request, monkeypatch):
+    """Pin the shared disk guard (``gateway.disk_status.new_work_refusal``) to "may start" so
+    admission/dispatch/cron tests do not depend on the runner's free space. Tests of the guard
+    opt out with ``@pytest.mark.real_disk_guard`` or patch the seam directly."""
+    if request.node.get_closest_marker("real_disk_guard"):
+        return
+    try:
+        from gateway import disk_status as _disk_mod
+    except Exception:
+        return
+    monkeypatch.setattr(_disk_mod, "new_work_refusal", lambda *a, **k: None, raising=False)
+
+
+@pytest.fixture(autouse=True)
 def _neutralize_git_safe_directory_read(request, monkeypatch):
     """Skip the ``git config --get-all safe.directory`` pre-read in ``noninteractive_git_env()``.
 
@@ -1289,6 +1303,11 @@ def pytest_configure(config):
         "require_symlinks: skip the test if symbolic links cannot be "
         "created in the current environment (needs admin/developer mode "
         "on Windows).",
+    )
+    config.addinivalue_line(
+        "markers",
+        "real_disk_guard: bypass the autouse fixture that pins the shared disk guard "
+        "(gateway.disk_status.new_work_refusal) to 'may start'.",
     )
     config.addinivalue_line(
         "markers",

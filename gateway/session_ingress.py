@@ -37,6 +37,9 @@ _CONTENT_CLAUSES = frozenset({
 # Nothing was committed (main's busy-queue cap); /retry answers it before rewriting (#139257).
 QUEUE_FULL_REPLY = ('⏳ Too many messages are already waiting in this conversation; '
                     'send this again after the current reply.')
+# Nothing was committed: the disk guard refused new work before the turn could spend a model call.
+DISK_FULL_REPLY = ('⚠️ The Hermes host is almost out of disk space, so this message was not saved or '
+                   'answered. Ask the operator to free disk space, then send it again.')
 # Nothing new was committed: the message id is already admitted with other content.
 ALREADY_ADMITTED_REPLY = ('⚠️ Hermes already received a different message under this message id, so this '
                           'version was not saved. Send it again as a new message to continue.')
@@ -74,6 +77,9 @@ async def admit_message(authority, event):
             logger.warning('Native message %s refused: its id is already admitted with other content',
                            getattr(event, 'message_id', None))
             return ALREADY_ADMITTED_REPLY
+        if exc.reason == 'storage_unavailable' and exc.field == 'disk':
+            logger.warning('Native message refused before commit: %s', exc.detail)
+            return DISK_FULL_REPLY
         if exc.reason != 'queue_full':
             raise
         # Nothing was committed (main's busy-queue cap): say so instead of a generic turn error.

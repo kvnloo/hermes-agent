@@ -4192,6 +4192,15 @@ def _process_due_job(job: dict, adapters, loop, verbose: bool) -> bool:
     return run_one_job(claimed_job, adapters=adapters, loop=loop, verbose=verbose)
 
 
+def _disk_new_work_refusal():
+    """The shared disk guard's refusal, or None; fails open (a broken probe never stops cron)."""
+    try:
+        from gateway.disk_status import new_work_refusal
+        return new_work_refusal()
+    except Exception:
+        return None
+
+
 def _submit_with_guard(job: dict, pool: concurrent.futures.ThreadPoolExecutor, process_job):
     """Submit with the in-flight dedup guard; None if a prior tick's run is still in flight.
     Running-set membership is released in the worker's finally."""
@@ -4235,6 +4244,15 @@ def _submit_with_guard(job: dict, pool: concurrent.futures.ThreadPoolExecutor, p
     # due and will fire on the next healthy tick (#58720, #55924).
     if _interpreter_shutting_down():
         _not_dispatched_shutdown()
+        _clear_run_claim_best_effort()
+        return None
+    # Disk guard: a run started into a critical volume cannot record its execution row, its
+    # output or its jobs.json stamp. Hold it like the shutdown skip above: it stays due and the
+    # due scan's restore/catch-up path fires it on the first tick after space is freed. The guard
+    # itself logs the degraded state once; this line is per job.
+    disk_refusal = _disk_new_work_refusal()
+    if disk_refusal is not None:
+        logger.info("Job '%s' deferred, not dispatched: %s", job_label, disk_refusal)
         _clear_run_claim_best_effort()
         return None
     registration_owner = object()

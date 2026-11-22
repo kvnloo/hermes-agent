@@ -10,11 +10,18 @@ percent) and an enum.  Best-effort: an unreadable filesystem degrades to
 
 from __future__ import annotations
 
+import contextlib
+import logging
+import os
 import shutil
+import tempfile
+import time
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 from gateway.memory_status import _nonneg_int
+
+logger = logging.getLogger(__name__)
 
 # Percent alone misleads both ways: 90% used on 100 GB leaves 10 GB, while 50% on a tiny
 # volume is one download from write failures.  So percent triggers are gated on absolute
@@ -58,3 +65,110 @@ def collect_disk_status(home: Optional[Path] = None) -> dict[str, Any]:
     status.update(total_mb=total_mb, free_mb=free_mb, used_percent=round((usage.used / usage.total) * 100, 1),
                   pressure=classify_disk_pressure(free_mb, total_mb))
     return status
+
+
+# ---------------------------------------------------------------------------
+# Write-path guard: one shared verdict for "may Hermes start new work?"
+# ---------------------------------------------------------------------------
+# A full volume does not fail one write: it fails every write (transcripts, turn leases,
+# admission settlement, runtime status, sessions.json, jobs.json, logs, provider temp files) and
+# each layer reports its own error. Starting a turn, a kanban worker or a cron run into a
+# critical volume spends a model call whose result cannot be saved. So the producers of new
+# work ask this one guard first and defer (never drop) while it reads ``critical``.
+# ``unknown`` (statvfs failed) never blocks: a broken probe must not brick the host.
+
+_GUARD_TTL_SECONDS = 5.0
+_guard_cache: Dict[tuple, tuple] = {}
+_guard_state: Dict[str, str] = {}
+_LEVEL_RANK = {"unknown": 0, "ok": 1, "elevated": 2, "critical": 3}
+GUARD_DISABLE_ENV = "HERMES_DISK_GUARD"
+
+
+def _guard_paths() -> list:
+    """The volumes a turn writes to: HERMES_HOME (state.db, sessions, cron, logs) and the
+    temp root (provider SDK spool files; an observed disk-full cascade began there)."""
+    paths = []
+    with contextlib.suppress(Exception):
+        from hermes_constants import get_hermes_home
+
+        paths.append(Path(get_hermes_home()))
+    with contextlib.suppress(Exception):
+        paths.append(Path(tempfile.gettempdir()))
+    return paths
+
+
+def _volume_sample(path: Path) -> Optional[tuple]:
+    """``(st_dev, free_mb, total_mb)`` for *path*'s volume, ``None`` when unreadable."""
+    try:
+        dev = os.stat(path).st_dev
+        usage = shutil.disk_usage(path)
+    except OSError:
+        return None
+    if usage.total <= 0:
+        return None
+    return dev, usage.free // _BYTES_PER_MB, usage.total // _BYTES_PER_MB
+
+
+def storage_pressure(paths: Optional[list] = None, *, now: Optional[float] = None) -> dict[str, Any]:
+    """Worst disk pressure across the volumes in *paths* (default: HERMES_HOME + temp root).
+
+    Returns ``{"pressure", "free_mb", "total_mb", "path"}`` for the worst volume. Cached for a
+    few seconds so per-admission callers cost one dict lookup. Never raises. Setting
+    ``HERMES_DISK_GUARD=off`` reports ``unknown`` (the guard's escape hatch).
+    """
+    verdict: dict[str, Any] = {"pressure": "unknown", "free_mb": None, "total_mb": None, "path": None}
+    if os.environ.get(GUARD_DISABLE_ENV, "").strip().lower() in {"0", "off", "false", "no"}:
+        return verdict
+    if paths is None:
+        paths = _guard_paths()
+    key = tuple(str(p) for p in paths)
+    clock = time.monotonic() if now is None else now
+    cached = _guard_cache.get(key)
+    if cached is not None and clock - cached[0] < _GUARD_TTL_SECONDS:
+        return dict(cached[1])
+    seen = set()
+    for path in paths:
+        sample = _volume_sample(Path(path))
+        if sample is None:
+            continue
+        dev, free_mb, total_mb = sample
+        if dev in seen:
+            continue
+        seen.add(dev)
+        level = classify_disk_pressure(free_mb, total_mb)
+        if _LEVEL_RANK.get(level, 0) > _LEVEL_RANK.get(verdict["pressure"], 0):
+            verdict = {"pressure": level, "free_mb": free_mb, "total_mb": total_mb, "path": str(path)}
+    _guard_cache[key] = (clock, dict(verdict))
+    _note_transition(verdict)
+    return verdict
+
+
+def _note_transition(verdict: dict[str, Any]) -> None:
+    """One WARNING when the host enters ``critical`` and one INFO when it leaves: the degraded
+    state is announced once instead of surfacing as a dozen downstream write errors."""
+    level = str(verdict.get("pressure") or "unknown")
+    if level == "unknown":
+        return
+    previous = _guard_state.get("level")
+    _guard_state["level"] = level
+    if level == "critical" and previous != "critical":
+        logger.warning(
+            "Disk guard: %s has %s MB free (critical); new turns, kanban workers and cron runs are "
+            "deferred until space is freed", verdict.get("path"), verdict.get("free_mb"))
+    elif previous == "critical" and level != "critical":
+        logger.info("Disk guard: %s recovered to %s (%s MB free); new work resumes",
+                    verdict.get("path"), level, verdict.get("free_mb"))
+
+
+def new_work_refusal(paths: Optional[list] = None) -> Optional[str]:
+    """``None`` when new work may start, else a one-line reason (critical disk only)."""
+    verdict = storage_pressure(paths)
+    if verdict["pressure"] != "critical":
+        return None
+    return f"disk critical: {verdict['free_mb']} MB free on the volume holding {verdict['path']}"
+
+
+def reset_guard_cache() -> None:
+    """Test seam: forget cached samples and the announced state."""
+    _guard_cache.clear()
+    _guard_state.clear()

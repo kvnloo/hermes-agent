@@ -262,6 +262,16 @@ class SessionAuthority:
             if not (queue_only and restart_wait_open(self.runner)):
                 raise AuthorityRefusal('runtime_draining')
 
+    def _require_storage_headroom(self):
+        """Refuse NEW input before commit while the disk guard reads critical: a turn admitted into a
+        full volume pays for model calls whose transcript, lease and settlement writes then fail one by
+        one (the 11-20 cascade). ``storage_unavailable`` is an owner-state refusal, so a resend admits
+        once space is freed. Claims of rows already queued are not gated here: they wait in the FIFO."""
+        from gateway.disk_status import new_work_refusal
+        detail = new_work_refusal()
+        if detail is not None:
+            raise AuthorityRefusal('storage_unavailable', field='disk', detail=detail)
+
     def gate_refusal(self, check=None, *, queue_only=False):
         """The admission gate as the ``gate`` an admission or claim verb takes, decided when this is called
         (callers call it in the write's own thread right before the verb): the refusal
@@ -599,6 +609,7 @@ class SessionAuthority:
         import json
         from gateway.session_envelope import prepare_native, restore_native_source
         self._require_admission_open()
+        self._require_storage_headroom()
         payload = await prepare_native(self.runner, event)
         if fingerprint := getattr(event, '_ingress_sha256', None):
             payload['native_text_v1']['ingress_sha256'] = fingerprint  # the delivery before a rewrite
@@ -748,6 +759,8 @@ class SessionAuthority:
     async def _submit(self, actor, request, *, queue_only=False, _kanban_card=None, replaces=None, supersedes=None,
                       api_target=None, hosted=None):
         self._require_admission_open(queue_only=queue_only)
+        if not queue_only:
+            self._require_storage_headroom()
         if (request.intent != 'queue' or not {'text'} <= set(request.payload) <= {
                 'text', 'attachments', 'finite', 'unattended', 'surface', 'voice_context', 'interrupted',
                 'voice_turn', 'display_kind', 'title_preview', 'turn_author', 'api_text', 'model_override', 'clarify_batch'}

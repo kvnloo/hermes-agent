@@ -151,6 +151,9 @@ class DispatchResult:
     """Memory pressure that restricted this tick: ``"critical"`` (no new
     workers), ``"elevated"`` (at most one), ``None`` (no restriction).
     Reclaim/promotion bookkeeping still ran; deferred tasks stay queued."""
+    disk_pressure: Optional[str] = None
+    """``"critical"`` when the disk guard held every new worker back this tick (a worker
+    started into a full volume burns a model call it cannot save), else ``None``."""
 
 
 def describe_suppression(results: Iterable[Optional[DispatchResult]]) -> str:
@@ -165,6 +168,7 @@ def describe_suppression(results: Iterable[Optional[DispatchResult]]) -> str:
     """
     counts: dict[str, int] = {}
     pressure: Optional[str] = None
+    disk: Optional[str] = None
     for res in results:
         if res is None:
             continue
@@ -176,9 +180,13 @@ def describe_suppression(results: Iterable[Optional[DispatchResult]]) -> str:
             counts["skipped_locked"] = counts.get("skipped_locked", 0) + 1
         if res.memory_pressure:
             pressure = res.memory_pressure
+        if res.disk_pressure:
+            disk = res.disk_pressure
     parts = [f"{k}={v}" for k, v in sorted(counts.items())]
     if pressure:
         parts.append(f"memory_pressure={pressure}")
+    if disk:
+        parts.append(f"disk_pressure={disk}")
     return ", ".join(parts)
 
 
@@ -1978,6 +1986,16 @@ def _memory_pressure_level(sample: Optional[Mapping[str, Any]] = None) -> str:
         return "unknown"
 
 
+def _disk_new_work_refusal() -> Optional[str]:
+    """The shared disk guard's refusal (``gateway.disk_status.new_work_refusal``), or None.
+    Module-level so tests patch one seam; any failure fails open (never brick dispatch)."""
+    try:
+        from gateway.disk_status import new_work_refusal
+        return new_work_refusal()
+    except Exception:
+        return None
+
+
 def dispatch_once(
     conn: sqlite3.Connection,
     *,
@@ -2240,6 +2258,15 @@ def _tick_spawn_budget(
         remaining = max_in_progress - total_running
         if spawn_budget is None or spawn_budget > remaining:
             spawn_budget = remaining
+
+    # Disk guard: on a critical volume every worker write (transcript, lease, outbox) fails
+    # with ENOSPC after the model call is paid for. Spawn nothing; ready tasks stay queued.
+    disk_refusal = _disk_new_work_refusal()
+    if disk_refusal is not None:
+        result.disk_pressure = "critical"
+        _kb._log.warning("kanban dispatch: %s; spawning no new workers this tick (deferred, not dropped)",
+                         disk_refusal)
+        return False, None
 
     # Memory-pressure guard: a static cap can't see the host's actual state.
     # critical -> spawn nothing this tick; elevated -> at most one new worker.
