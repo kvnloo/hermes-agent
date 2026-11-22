@@ -114,7 +114,7 @@ def _view(m):
     return None if m is None else (m.span(), m.groups())
 
 
-def operation(fn, repl):
+def operation(fn, repl, limit):
     def marker(p):
         return b"<>" if isinstance(p.pattern, bytes) else "<>"
 
@@ -125,9 +125,9 @@ def operation(fn, repl):
         "fullmatch": lambda p, s: _view(p.fullmatch(s)),
         "findall": lambda p, s: p.findall(s),
         "finditer": lambda p, s: [_view(m) for m in p.finditer(s)],
-        "split": lambda p, s: p.split(s),
-        "sub": lambda p, s: p.sub(repl, s),
-        "subn": lambda p, s: p.subn(repl, s),
+        "split": lambda p, s: p.split(s, limit),
+        "sub": lambda p, s: p.sub(repl, s, limit),
+        "subn": lambda p, s: p.subn(repl, s, limit),
     }
     return table[fn]
 
@@ -164,14 +164,14 @@ def _within_deadline(work):
         signal.signal(alarm, previous)
 
 
-def differs(facade, pattern, flags, fn, repl):
+def differs(facade, pattern, flags, fn, repl, limit):
     """The first generated subject on which the call's result differs, else None; raises _Deadline when stdlib stalls."""
     try:
         old = stdlib_re.compile(pattern, flags)
     except (stdlib_re.error, ValueError, RecursionError):
         return None
     new = facade.compile(pattern, flags)
-    call = operation(fn, repl)
+    call = operation(fn, repl, limit)
     texts = subjects(pattern)
     return _within_deadline(lambda: _compare(call, old, new, texts))
 
@@ -212,6 +212,16 @@ def keyword(node, name):
     return next((k.value for k in node.keywords if k.arg == name), None)
 
 
+def integer_literal(node):
+    if isinstance(node, ast.Constant) and isinstance(node.value, int):
+        return node.value
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.UAdd, ast.USub)):
+        value = node.operand
+        if isinstance(value, ast.Constant) and type(value.value) is int:
+            return -value.value if isinstance(node.op, ast.USub) else value.value
+    return None
+
+
 def classify(facade, node, fn, pattern):
     """(kind, detail) for one call with a literal pattern, or None when it is clean."""
     flag_node = keyword(node, "flags")
@@ -235,8 +245,16 @@ def classify(facade, node, fn, pattern):
     marker = b"<>" if isinstance(pattern, bytes) else "<>"
     repl = repl_node.value if fn in ("sub", "subn") and isinstance(repl_node, ast.Constant) \
         and isinstance(repl_node.value, type(pattern)) else marker
+    limit = 0
+    if fn in ("split", "sub", "subn"):
+        name = "maxsplit" if fn == "split" else "count"
+        limit_node = keyword(node, name)
+        if limit_node is None and len(node.args) >= index:
+            limit_node = node.args[index - 1]
+        if limit_node is not None:
+            limit = integer_literal(limit_node) or 0
     try:
-        example = differs(facade, pattern, flags, fn, repl)
+        example = differs(facade, pattern, flags, fn, repl, limit)
     except _Deadline:
         return "UNCHECKED", f"stdlib re did not finish {fn}() on the generated strings within {DEADLINE:g}s"
     if example is not None:
