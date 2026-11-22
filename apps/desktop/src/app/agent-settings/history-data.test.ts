@@ -231,3 +231,16 @@ it('reads recent activity relative and older activity as a date, with the exact 
     /Oct 30, 2026.*12:00/
   )
 })
+
+it.each([
+  ['2026-11-01T00:30:00-04:00', '2026-11-02T12:00:00-05:00', 'Yesterday'],
+  ['2026-03-07T23:30:00-05:00', '2026-03-09T12:00:00-04:00', 'Mar 7']
+])('uses local calendar dates around DST (%s)', (stamp, now, label) => {
+  // Vitest runs this project in forked Node processes.
+  vi.stubEnv('TZ', 'America/New_York')
+  try {
+    expect(historyLastActive(Date.parse(stamp) / 1000, 'en-US', Date.parse(now)).label).toBe(label)
+  } finally {
+    vi.unstubAllEnvs()
+  }
+})
