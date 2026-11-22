@@ -1229,7 +1229,7 @@ class TestReadAction:
         """A missing parameter is fixed by ``read`` plus a retry, not by echoing the store."""
         from tools.memory_tool import _memory_tool
         store.add("memory", "seed entry")
-        outcome, payload = _memory_tool("patch", "memory", "new text", None, None, None, store)
+        outcome, payload = _memory_tool("patch", "memory", "new text", None, None, None, doc=None, store=store)
         assert outcome == "rejected"
         result = json.loads(payload)
         assert result["success"] is False
