@@ -19,6 +19,14 @@ animates natively. It is a sibling of the Ink TUI (`ui-tui/`) and talks to the s
 The frontend asks the terminal for TSP first. A terminal that doesn't answer makes it exit with
 code 75, and the launcher runs the Ink TUI in its place (`hermes_cli/main_tui_launch.py`).
 
+Local Omalauncher preview setup (2026-10-19): `/root/.local/bin/hermes-tern-preview`
+launches this checkout at `724b2aaec5981eb264f65923f72858faff27bb5b` without replacing
+the normal `hermes` command. It shares the existing Hermes profile and credentials but
+has a separate managed dependency environment. The local `pm/environment.py` uses uv
+copy mode, matching the installed phone workaround: PRoot rejected hardlinks during
+runtime provisioning. Dependency provisioning, the native frontend build, and the real
+Tern welcome/editor/settings surface were verified on this phone.
+
 ## Model management
 
 `/models`, **Settings → Manage auxiliary roles, fallbacks and providers**, or the configurable
