@@ -285,7 +285,7 @@ class PythonEnvironment:
 
             env = {key: value for key, value in env.items() if not is_index_redirect(key)}
         env.update(UV_PYTHON=str(self.python), UV_PROJECT_ENVIRONMENT=str(self.destination),
-                   UV_CACHE_DIR=str(self.cache), UV_PYTHON_DOWNLOADS="never")
+                   UV_CACHE_DIR=str(self.cache), UV_PYTHON_DOWNLOADS="never", UV_LINK_MODE="copy")
         with tempfile.TemporaryDirectory(prefix="pm-uv-config-") as config:
             env.update(XDG_CONFIG_HOME=config, XDG_CONFIG_DIRS=config)
             command = [str(self.uv), *args]
