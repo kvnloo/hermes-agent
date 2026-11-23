@@ -180,3 +180,16 @@ def test_a_profile_distribution_keeps_the_window_fields(cron_home):
     local = J.create_job(prompt="synthetic", schedule="every 1h", deliver="local")
     merged = merge_job_definition(local, {**local, "window_class": "peak", "stale_after_s": 900})
     assert merged["window_class"] == "peak" and merged["stale_after_s"] == 900
+
+
+def test_cron_list_explains_a_hold_without_blaming_the_gateway(cron_home, dispatched, monkeypatch):
+    from hermes_cli.cron import _job_warnings
+
+    _use_provider(monkeypatch, Fixed(WindowClass.WIND_DOWN))
+    job = J.create_job(prompt="synthetic decision", schedule="every 1h", deliver="local", window_class="peak")
+    _make_due(job["id"])
+    S.tick(verbose=False)
+
+    text = " ".join(_job_warnings(_stored(job["id"])))
+    assert "decision window" in text and "wind_down" in text
+    assert "gateway" not in text

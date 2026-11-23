@@ -29,10 +29,31 @@ def _opted_in(job: dict) -> bool:
     return job.get("window_class") is not None or job.get("stale_after_s") is not None
 
 
+WINDOW_HOLD = "window_hold"  # ``last_fire_error["kind"]``: ``hermes cron list`` explains a hold, not an outage
+
+
+def _note_held(held: dict[str, str]) -> None:
+    """Stamp each held job's reason and drop the dispatch marks the due scan just wrote: the slot
+    was never handed over, so nothing must "restore" or "reclaim" it."""
+    from cron.jobs import _hermes_now, _jobs_lock, load_jobs, save_jobs
+
+    at = _hermes_now().isoformat()
+    with _jobs_lock():
+        jobs = load_jobs()
+        for job in jobs:
+            reason = held.get(str(job["id"]))
+            if reason is None:
+                continue
+            job["last_fire_error"] = {"at": at, "detail": f"Held: {reason}"[:500], "kind": WINDOW_HOLD}
+            job.pop("pending_slot", None)
+            if job.get("run_claim") is not None:
+                job["run_claim"] = None
+        save_jobs(jobs)
+
+
 def hold_outside_window(due_jobs: list) -> list:
     """Return the due jobs whose window is open; hold or drop the others (see module doc)."""
     from cron.jobs import _hermes_now, advance_next_runs
-    from cron.scheduler_gateway_gate import _note_fire_refused
 
     gated = [job for job in due_jobs if _opted_in(job)]
     if not gated:
@@ -46,11 +67,7 @@ def hold_outside_window(due_jobs: list) -> list:
             held[str(job["id"])] = reason
     if not held:
         return due_jobs
-    by_reason: dict[str, list[str]] = {}
-    for job_id, reason in held.items():
-        by_reason.setdefault(reason, []).append(job_id)
-    for reason, job_ids in by_reason.items():
-        _note_fire_refused(job_ids, f"Held: {reason}")
+    _note_held(held)
     advance_next_runs([str(job["id"]) for job in gated if str(job["id"]) in held and is_stale(job, now)])
     logger.debug("Cron tick held %d job(s) outside their decision window: %s", len(held),
                  "; ".join(f"{job_id}: {reason}" for job_id, reason in held.items()))
