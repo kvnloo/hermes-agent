@@ -53,6 +53,8 @@ def test_utils_product_reach_blocks_and_honours_waiver(tmp_path, capsys):
 @pytest.mark.parametrize("src, flagged", [
     ("from typing import TYPE_CHECKING\nif TYPE_CHECKING:\n    from agent import x\n", True),
     ("import importlib\nimportlib.import_module('agent.x')\n", True),
+    ("import importlib\nimportlib.import_module(name='agent.x')\n", True),
+    ("import importlib\nimportlib.import_module(package=None, name='agent.x')\n", True),
     ("m = __import__('gateway')\n", True),
     ("import sys as s\nm = s.modules['agent']\n", True),
     ("import sys\nok = 'agent' in sys.modules\n", True),
