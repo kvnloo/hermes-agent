@@ -186,3 +186,37 @@ async def test_reasoning_block_shows_thinking_then_thought_for_seconds(monkeypat
 def _titles(client, prefix):
     return [title for method, chunks in client.frames() if method == "chat.appendStream"
             for title, _ in chunks if str(title).startswith(prefix)]
+
+
+@pytest.mark.asyncio
+async def test_rotated_rollup_keeps_closed_run_details_once_per_stream():
+    adapter, client = _adapter({"native_task_cards": True, "task_card_rollup": True})
+    runner = GatewayTurnProgressMixin.__new__(GatewayTurnProgressMixin)
+    runner._ctx = _ctx(_events(), {"v": True}, NS(is_interrupted=False))
+    state = runner._TaskCardState(adapter, rollup=True)
+
+    async def publish(*events):
+        for event in events:
+            assert state.apply_event(event)
+            await runner._task_card_publish(state)
+
+    await publish(_started(1, "read_file"), _done(1, "read_file"),
+                  _started(2, "terminal"), _done(2, "terminal", error=True),
+                  {"type": "text.boundary"})
+    (stream,) = adapter._native_task_card_streams.values()
+    stream.started_at -= 550
+    await publish(_started(3), _done(3))
+    runner._task_card_stage_final_frame(state)
+    await adapter.stop_native_task_card_progress("C1", metadata={"thread_id": "1.1"})
+
+    def trails(ts):
+        return [
+            chunk["details"]
+            for _, frame in client.calls
+            if frame.get("ts") == ts
+            for chunk in frame.get("chunks", [])
+            if chunk.get("id") == "run-1" and chunk.get("details")
+        ]
+
+    assert len(trails("s1")) == 1
+    assert trails("s2") == trails("s1")
