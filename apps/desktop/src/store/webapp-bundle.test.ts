@@ -202,6 +202,28 @@ describe('reloadOntoServedBundle', () => {
     expect(reload).toHaveBeenCalledTimes(2)
   })
 
+  it('ignores an older current response after a newer check observes a failed rebuild', async () => {
+    let deliverOld!: (value: { current: boolean; id: string }) => void
+    api.mockImplementationOnce(
+      () =>
+        new Promise(resolve => {
+          deliverOld = resolve
+        })
+    )
+    const oldCheck = reloadOntoServedBundle()
+
+    served = { current: false, id: 'new' }
+    await reloadOntoServedBundle()
+
+    deliverOld({ current: true, id: 'new' })
+    await oldCheck
+    expect(reload).not.toHaveBeenCalled()
+
+    served = { current: true, id: 'newer' }
+    await reloadOntoServedBundle()
+    expect(reload).toHaveBeenCalledTimes(1)
+  })
+
   it('reloads once when a reconnect check and the minute check overlap', async () => {
     await Promise.all([reloadOntoServedBundle(), reloadOntoServedBundle()])
 
