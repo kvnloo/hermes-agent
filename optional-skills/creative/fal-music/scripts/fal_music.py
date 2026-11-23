@@ -17,11 +17,15 @@ fal OpenAPI schema declares; unsupported knobs are dropped, never forwarded.
 from __future__ import annotations
 
 import argparse
+import http.client
 import json
+import math
 import os
 import shutil
 import sys
+import tempfile
 import urllib.request
+from pathlib import Path
 from typing import Any, Optional
 
 # ── Model catalog ────────────────────────────────────────────────────────────
@@ -193,8 +197,8 @@ SUBSCRIBE_TIMEOUT_S = 900
 def _positive_seconds(value: str) -> float:
     """A sign typo must fail before billing, not clamp to the model minimum and generate."""
     seconds = float(value)
-    if seconds <= 0:
-        raise argparse.ArgumentTypeError(f"--duration must be positive, got {value}")
+    if not math.isfinite(seconds) or seconds <= 0:
+        raise argparse.ArgumentTypeError(f"--duration must be finite and positive, got {value}")
     return seconds
 
 
@@ -249,9 +253,17 @@ def generate(model: str, payload: dict[str, Any], output: str) -> dict[str, Any]
         raise SystemExit(f"fal request failed ({MODELS[model]['endpoint']}): {exc}") from exc
     url = _audio_url(result)
     try:  # the generation is already billed: a failed download must still say where the audio lives
-        with urllib.request.urlopen(url, timeout=120) as resp, open(output, "wb") as fh:
-            shutil.copyfileobj(resp, fh)
-    except OSError as exc:
+        temporary = None
+        try:
+            with urllib.request.urlopen(url, timeout=120) as resp:
+                with tempfile.NamedTemporaryFile(dir=Path(output).parent, delete=False) as fh:
+                    temporary = Path(fh.name)
+                    shutil.copyfileobj(resp, fh)
+            os.replace(temporary, output)
+        finally:
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
+    except (OSError, http.client.HTTPException) as exc:
         raise SystemExit(f"generated, but saving {url} to {output} failed: {exc}") from exc
     extra = {k: v for k, v in result.items() if k not in ("audio", "audio_file")}
     return {"output": output, "url": url, "model": model, "endpoint": MODELS[model]["endpoint"], **extra}
