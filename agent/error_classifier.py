@@ -1448,7 +1448,7 @@ def _classify_400(c: _Ctx) -> Verdict:
     # bare "Error"); proxy shapes are read so a descriptive rejection isn't "bare".
     body_msg = next((m for m in (str(x or "").strip().lower() for x in _body_message_candidates(c.body)) if m), "")
     is_generic = len(body_msg) < 30 or body_msg in {"error", ""} or any(
-        p in body_msg for p in _UNNAMED_REJECTION_PATTERNS)
+        c.provider_slug == "stepfun" and p in body_msg for p in _UNNAMED_REJECTION_PATTERNS)
     if is_generic and c.large_session(0.4, 80000, 80):
         return _V_CONTEXT_OVERFLOW
     return _V_FORMAT_ERROR
