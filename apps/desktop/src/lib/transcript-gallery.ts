@@ -41,6 +41,24 @@ export function lightboxNeighbors(
   return { next: sources[index + 1] ?? null, previous: sources[index - 1] ?? null }
 }
 
+/** Keep an open lightbox's controls in sync with its rendered transcript. */
+export function watchLightboxNeighbors(anchor: Element | null, update: () => void): (() => void) | undefined {
+  const scope = anchor?.closest(GALLERY_SCOPE)
+
+  if (!scope) {
+    return
+  }
+
+  const observer = new MutationObserver(update)
+  observer.observe(scope, {
+    attributeFilter: [LIGHTBOX_SRC_ATTR],
+    childList: true,
+    subtree: true
+  })
+
+  return () => observer.disconnect()
+}
+
 /** Scroll the thumbnail for `src` into view so closing the lightbox lands where the user stepped to. */
 export function revealLightboxThumbnail(anchor: Element | null, src: string): void {
   const scope = anchor?.closest(GALLERY_SCOPE)

@@ -8,7 +8,7 @@ import { useZoomPan } from '@/components/ui/use-zoom-pan'
 import { useImageDownload } from '@/hooks/use-image-download'
 import { useI18n } from '@/i18n'
 import { ChevronLeft, ChevronRight, Download, ZoomIn, ZoomOut } from '@/lib/icons'
-import { LIGHTBOX_SRC_ATTR, lightboxNeighbors, revealLightboxThumbnail } from '@/lib/transcript-gallery'
+import { LIGHTBOX_SRC_ATTR, lightboxNeighbors, revealLightboxThumbnail, watchLightboxNeighbors } from '@/lib/transcript-gallery'
 import { cn } from '@/lib/utils'
 import { $transcriptLightbox, closeTranscriptLightbox, openTranscriptLightbox } from '@/store/transcript-lightbox'
 
@@ -64,12 +64,26 @@ export function ZoomableImage({
   const lightboxOpen = openSrc !== null && openSrc === fullSrc
   const canOpen = Boolean(src)
   const anchorRef = useRef<HTMLSpanElement>(null)
-  // Neighbours are read from the DOM when this image's lightbox opens: the
-  // transcript is the gallery, so there is no second list to keep in sync.
+  // The rendered transcript is the gallery, including images added after opening.
   const [neighbors, setNeighbors] = useState<{ next: string | null; previous: string | null }>(NO_NEIGHBORS)
 
   useEffect(() => {
-    setNeighbors(lightboxOpen ? lightboxNeighbors(anchorRef.current, fullSrc) : NO_NEIGHBORS)
+    if (!lightboxOpen) {
+      setNeighbors(NO_NEIGHBORS)
+
+      return
+    }
+
+    const anchor = anchorRef.current
+
+    const refresh = () => {
+      const next = lightboxNeighbors(anchor, fullSrc)
+      setNeighbors(previous => previous.next === next.next && previous.previous === next.previous ? previous : next)
+    }
+
+    refresh()
+
+    return watchLightboxNeighbors(anchor, refresh)
   }, [lightboxOpen, fullSrc])
 
   const gallery: LightboxGallery = {
