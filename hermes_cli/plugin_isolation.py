@@ -45,6 +45,7 @@ HOST_UNSUPPORTED_CTX_METHODS: dict[str, str] = {
     "register_slack_action_handler": "the callback receives native slack_bolt ack/body objects",
     "register_dashboard_auth_provider": "dashboard auth is owned by the launch process, not a profile",
     "register_approval_transport": "approval transports hold the live approval request/response channel",
+    "register_window_provider": "the cron ticker calls the window provider in-process on every tick",
     "post_message": "the returned handle is bound to the gateway's event loop and live adapter",
     "apost_message": "the returned handle is bound to the gateway's event loop and live adapter",
     "fork_session": "the returned handle tracks a fork thread of the live session agent in the Hermes process",
