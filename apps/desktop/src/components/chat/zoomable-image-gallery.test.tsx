@@ -3,6 +3,7 @@
 // neighbouring transcript image; images in another chat surface are not part
 // of the gallery.
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { useState } from 'react'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { I18nProvider } from '@/i18n/context'
@@ -60,6 +61,33 @@ describe('transcript lightbox gallery', () => {
     await act(async () => {
       fireEvent.keyDown(screen.getByRole('dialog'), { key: 'ArrowLeft' })
     })
+    expect(shown()).toBe('https://e.x/b.png')
+  })
+
+  it('steps to an image appended while the last image is open', async () => {
+    let appendImage: () => void = () => {}
+
+    function Transcript() {
+      const [appended, setAppended] = useState(false)
+      appendImage = () => setAppended(true)
+
+      return (
+        <div data-chat-surface="">
+          <ZoomableImage alt="first" src="https://e.x/a.png" />
+          {appended && <ZoomableImage alt="appended" src="https://e.x/b.png" />}
+        </div>
+      )
+    }
+
+    await act(async () => {
+      render(<I18nProvider configClient={config}><Transcript /></I18nProvider>)
+    })
+    fireEvent.click(screen.getByAltText('first').closest('button')!)
+    expect(shown()).toBe('https://e.x/a.png')
+
+    await act(async () => appendImage())
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'ArrowRight' })
+
     expect(shown()).toBe('https://e.x/b.png')
   })
 
