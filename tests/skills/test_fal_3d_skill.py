@@ -106,3 +106,37 @@ def test_default_output_takes_the_returned_format(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     out = fal_3d.generate("hunyuan-3.1-rapid", "e", {}, None)
     assert (out["format"], Path(out["output"]).name) == ("obj", "fal-3d-hunyuan-3.1-rapid.obj")
+
+
+def test_generate_refuses_to_overwrite_default_mesh(monkeypatch, tmp_path):
+    from io import BytesIO
+    from types import SimpleNamespace
+
+    model = fal_3d.DEFAULT_MODEL
+    output = tmp_path / f"fal-3d-{model}.obj"
+    output.write_bytes(b"original mesh")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setitem(sys.modules, "fal_client", SimpleNamespace(
+        subscribe=lambda *args, **kwargs: {"model_obj": {"url": "https://example.invalid/mesh.obj"}},
+    ))
+    monkeypatch.setattr(fal_3d.urllib.request, "urlopen", lambda *args, **kwargs: BytesIO(b"new mesh"))
+
+    try:
+        with pytest.raises(SystemExit, match="already exists"):
+            fal_3d.generate(model, fal_3d.endpoint_for(model, None), {"prompt": "owl"}, None)
+    finally:
+        assert output.read_bytes() == b"original mesh"
+
+
+def test_generate_reports_queue_timeout_before_download(monkeypatch, tmp_path):
+    from types import SimpleNamespace
+
+    def timeout(*args, **kwargs):
+        raise TimeoutError("mock queue timed out")
+
+    monkeypatch.setitem(sys.modules, "fal_client", SimpleNamespace(subscribe=timeout))
+    monkeypatch.setattr(fal_3d.urllib.request, "urlopen", lambda *args, **kwargs: pytest.fail("unexpected download"))
+
+    with pytest.raises(SystemExit, match="fal request failed.*mock queue timed out"):
+        fal_3d.generate(fal_3d.DEFAULT_MODEL, "mock-endpoint", {}, str(tmp_path / "mesh.obj"))
+    assert not (tmp_path / "mesh.obj").exists()
