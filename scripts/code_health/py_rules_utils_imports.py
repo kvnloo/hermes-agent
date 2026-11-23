@@ -28,10 +28,14 @@ def _reached(node: ast.AST) -> Iterator[str]:
         yield from (alias.name for alias in node.names)
     elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
         yield node.module
-    elif isinstance(node, ast.Call) and node.args:
+    elif isinstance(node, ast.Call):
         name = _call_name(node)
-        if name in _IMPORT_CALLS or name == "sys.modules.get":
+        if node.args and (name in _IMPORT_CALLS or name == "sys.modules.get"):
             yield from filter(None, [_literal(node.args[0])])
+        elif name == "importlib.import_module":
+            for keyword in node.keywords:
+                if keyword.arg == "name":
+                    yield from filter(None, [_literal(keyword.value)])
     elif isinstance(node, ast.Subscript) and _dotted(node.value) == "sys.modules":
         yield from filter(None, [_literal(node.slice)])
     elif isinstance(node, ast.Compare) and isinstance(node.ops[0], (ast.In, ast.NotIn)):
