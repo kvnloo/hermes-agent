@@ -15,9 +15,14 @@ read-only connection the endpoint opens.
 """
 
 import asyncio
+import sqlite3
 import threading
 
 import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+import hermes_state
 
 import hermes_cli.web_server_sessions as _web_server_sessions
 import hermes_cli.web_routers.sessions as _rt_sessions
@@ -96,3 +101,37 @@ def test_search_title_lane_runs_off_event_loop(db_path_for_profile, monkeypatch)
     asyncio.run(_rt_sessions.search_sessions(q="Modpack", limit=20))
     assert db_threads
     assert all(tid != loop_thread for tid in db_threads)
+
+
+def test_search_returns_busy_when_only_the_fts_leg_is_locked(tmp_path, monkeypatch):
+    home = tmp_path / "home"
+    home.mkdir()
+    (home / "config.yaml").write_text("database:\n  journal_mode: delete\n", encoding="utf-8")
+    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setattr(hermes_state, "_READ_BUSY_TIMEOUT_S", 0.05)
+    path = tmp_path / "state.db"
+    with SessionDB(db_path=path) as db:
+        db.create_session("s", "cli")
+        db.append_message("s", role="user", content="deploy the nimbus cluster")
+    monkeypatch.setattr(_web_server_sessions, "_session_db_path_for_profile", lambda profile: path)
+    app = FastAPI()
+    app.include_router(_rt_sessions.search_router)
+    search_messages = SessionDB.search_messages
+
+    def lock_before_match(db, *args, **kwargs):
+        # Let the read-only open, schema probe and ID lookup complete first.
+        with sqlite3.connect(path, isolation_level=None) as holder:
+            holder.execute("BEGIN EXCLUSIVE")
+            return search_messages(db, *args, **kwargs)
+
+    with TestClient(app) as client:
+        url = "/api/sessions/search"
+        assert len(client.get(url, params={"q": "nimbus"}).json()["results"]) == 1
+        empty = client.get(url, params={"q": "zephyrine"})
+        assert empty.status_code == 200
+        assert empty.json() == {"results": []}
+        monkeypatch.setattr(SessionDB, "search_messages", lock_before_match)
+        response = client.get(url, params={"q": "nimbus"})
+        assert (response.status_code, response.json()) == (
+            503, {"detail": "Session store is busy. Retry search."},
+        )
