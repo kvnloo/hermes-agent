@@ -220,3 +220,35 @@ async def test_rotated_rollup_keeps_closed_run_details_once_per_stream():
 
     assert len(trails("s1")) == 1
     assert trails("s2") == trails("s1")
+
+
+@pytest.mark.asyncio
+async def test_rotation_replays_rows_outside_the_current_window():
+    adapter, client = _adapter({"native_task_card_rotate_seconds": 540})
+    metadata = {"thread_id": "1.1"}
+    card = TurnRunner._TaskCardState(adapter=adapter)
+
+    async def publish():
+        rows = card.visible_tasks()
+        result = await adapter.send_native_task_card_progress("C1", rows, metadata=metadata)
+        assert result.success
+        card.mark_published(rows)
+
+    for n in range(9):
+        card.apply_event(_started(n))
+        await publish()
+        card.apply_event(_done(n))
+        await publish()
+
+    (stream,) = adapter._native_task_card_streams.values()
+    stream.started_at -= 541
+    card.apply_event(_started(9))
+    assert "call-0" not in {row["id"] for row in card.visible_tasks()}
+    await publish()
+
+    method, frame = client.calls[-1]
+    assert (method, frame["ts"]) == ("chat.appendStream", "s2")
+    assert [(row["id"], row["status"]) for row in frame["chunks"][1:]] == [
+        *((f"call-{n}", "complete") for n in range(9)),
+        ("call-9", "in_progress"),
+    ]
