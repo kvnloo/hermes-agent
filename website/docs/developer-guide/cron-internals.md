@@ -15,6 +15,7 @@ The cron subsystem provides scheduled task execution — from simple one-shot de
 | `cron/jobs.py` | Job model, storage, atomic read/write to `jobs.json` |
 | `cron/jobs_time.py` | Per-job `timezone` / `grace_minutes` knobs: validation, tolerant reads, due-scan zone |
 | `cron/scheduler.py` | Scheduler loop — due-job detection, execution, repeat tracking |
+| `cron/decision_window.py`, `cron/scheduler_window_gate.py` | Per-job `window_class` / `stale_after_s`: the pure `gate()` and the tick step that holds or drops due jobs |
 | `tools/cronjob_tools.py` | Model-facing `cronjob_manage` tool registration and handler |
 | `gateway/run.py` | Gateway integration — cron ticking in the long-running loop |
 | `hermes_cli/cron.py` | CLI `hermes cron` subcommands |

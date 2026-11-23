@@ -255,6 +255,34 @@ hermes cron edit market-open --grace-minutes 180  # run up to 3h late
 
 `0` means never catch up; `--grace-minutes ""` restores the computed window. It only applies to cron expressions — `once` and `interval` schedules have no missed wall clock to catch up on.
 
+## Decision windows
+
+A proactive job can say *when* it should speak, not only when it is due. Two optional job fields
+do this; a job without them fires whenever it is due, exactly as before.
+
+- `window_class`: `peak` (asks for a decision), `trough` (a review or an easy read),
+  `wind_down` (an end-of-day question) or `anytime`. Recurring schedules only: a one-shot held
+  past its 2-minute grace would be retired as missed.
+- `stale_after_s`: seconds after the due instant beyond which the occurrence is dropped instead
+  of fired, because a late reminder is noise. It also applies to a late catch-up run.
+
+Which window is open is answered by a **window provider** that a plugin registers with
+`ctx.register_window_provider(provider)`; `provider.current(now)` returns the open class, or
+`None` when it cannot tell. Hermes ships no provider and never reads a clock for this: with none
+registered every window counts as open (`anytime`), so the fields change nothing until a plugin
+supplies one.
+
+On each tick a due job with a `window_class` fires when its window is open (or the provider says
+`anytime`). Otherwise it is **held**: no run is recorded, its due instant does not move, and
+`hermes cron list` shows the reason (`held ... outside its decision window: trough window open:
+holds the peak job`). A later
+tick fires it once the window opens, within the job's catch-up window; past that window the
+ordinary missed-run policy applies. A stale recurring occurrence is dropped and the job moves to
+its next slot. `hermes cron run` is never held.
+
+Set the fields in `cron/jobs.json` (a shipped profile keeps them) or through the Python job API
+(`create_job(..., window_class="peak", stale_after_s=3600)`).
+
 ## Editing jobs
 
 You do not need to delete and recreate jobs just to change them.

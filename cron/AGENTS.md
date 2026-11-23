@@ -15,7 +15,8 @@ injected into the prompt; `no_agent=True` makes the script the whole job; always
 A's last output into job B's prompt), `workdir` (run with that directory's `AGENTS.md`/`CLAUDE.md`
 loaded), `timezone` (pin the cron expression's wall clock to an IANA zone; absent = the profile's
 zone), `grace_minutes` (override the catch-up window; `0` = never catch up, cron only),
-multi-platform delivery.
+`window_class`/`stale_after_s` (decision-window gate, `cron/decision_window.py`: held outside the
+plugin provider's window, stale occurrences dropped; absent = unchanged), multi-platform delivery.
 
 Hardening invariants — each guards a real failure; don't weaken without answering for it:
 - **Inactivity watchdog** on cron agent sessions (`_cron_inactivity_seconds()`): default 600s idle,
