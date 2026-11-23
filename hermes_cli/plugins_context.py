@@ -515,6 +515,28 @@ class PluginContext(PluginCapabilityCtxMixin, PluginIdleTaskCtxMixin):
         _facade().logger.info("Plugin '%s' registered context engine: %s", self.manifest.name, engine.name)
         return handle
 
+    def register_window_provider(self, provider) -> Optional[PluginRegistration]:
+        """Register the (single) cron decision-window provider: an object whose ``current(now)``
+        returns the window open now (``cron.decision_window.WindowClass`` or its value) or None.
+        Due jobs with a ``window_class`` fire only while their window is open; a second
+        registration is rejected with a warning."""
+        if not callable(getattr(provider, "current", None)):
+            raise TypeError(f"Plugin '{self.manifest.name}' tried to register a window provider "
+                            "without a callable current(now).")
+        if self._manager._window_provider is not None:
+            _facade().logger.warning("Plugin '%s' tried to register a window provider, but one is already "
+                                     "registered. Only one window provider plugin is allowed.", self.manifest.name)
+            return None
+        self._manager._window_provider = provider
+        handle = self._track_replacement(
+            "window_provider", type(provider).__name__,
+            slot=("manager_value", id(self._manager), "_window_provider"), current=provider, previous=None,
+            restore=lambda replacement: self._manager._restore_value("_window_provider", provider, replacement),
+        )
+        _facade().logger.info("Plugin '%s' registered window provider: %s", self.manifest.name,
+                              type(provider).__name__)
+        return handle
+
     def register_context_reference(self, provider) -> None:
         """Register a :class:`agent.context_references.ContextReferenceProvider`; ``provider.prefix`` defines
         ``@<prefix>:``. Built-in prefixes (diff, staged, file, folder, git, url) are rejected."""

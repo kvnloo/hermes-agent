@@ -18,8 +18,11 @@ logger = logging.getLogger(__name__)
 
 
 def resolve_window_provider() -> WindowProvider:
-    """The window provider for this tick; every window is open until one is registered."""
-    return ALWAYS_ANYTIME
+    """The provider a plugin registered for this profile (``ctx.register_window_provider``), else
+    ``ALWAYS_ANYTIME``: every window open."""
+    from hermes_cli.plugins import get_plugin_window_provider
+
+    return get_plugin_window_provider() or ALWAYS_ANYTIME
 
 
 def _opted_in(job: dict) -> bool:
