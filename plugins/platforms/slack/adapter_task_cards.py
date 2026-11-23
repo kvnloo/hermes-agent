@@ -155,17 +155,24 @@ class SlackTaskCardMixin:
                 return SendResult(success=False, error="Progress stream already stopped")
             try:
                 client = self._get_client(chat_id, team_id=stream.team_id)
+                rows = [self._task_update_chunk(task) for task in tasks]
                 if stream.stream_ts and self._native_task_card_due_for_rotation(stream):
+                    # The replacement has no history. Seed it with the latest rows
+                    # and give each closed run its append-only trail once.
+                    replacement = dict(stream.rows)
+                    for row in rows:
+                        replacement[row["id"]] = {**replacement.get(row["id"], {}), **row}
                     await self._rotate_native_task_card_stream(client, stream)
+                    rows = list(replacement.values())
                 if not stream.stream_ts:
                     await self._start_native_task_card_stream(client, stream, metadata)
-                rows = [self._task_update_chunk(task) for task in tasks]
                 chunks: list[dict[str, Any]] = [{"type": "plan_update", "title": str(title)[:256]}, *rows]
                 # chunks-only: Slack rejects markdown_text alongside chunks
                 # (cannot_provide_both_markdown_text_and_chunks, #87743); the gateway owns
                 # the editable-text fallback rail that fallback_text feeds when this call fails.
                 await self._append_stream_chunks(client, stream, chunks, chat_id, metadata)
-                stream.rows.update((row["id"], {k: v for k, v in row.items() if k != "details"}) for row in rows)
+                for row in rows:
+                    stream.rows[row["id"]] = {**stream.rows.get(row["id"], {}), **row}
                 return SendResult(success=True, message_id=stream.stream_ts)
             except Exception as exc:  # pragma: no cover - defensive logging
                 logger.error("[Slack] Native task-card progress error: %s", exc, exc_info=True)
@@ -304,7 +311,9 @@ class SlackTaskCardMixin:
         """
         closing: list[dict[str, Any]] = [
             {"type": "plan_update", "title": t("platform.slack.task_card.continued")[:256]}]
-        for row in stream.rows.values():
+        for cached in stream.rows.values():
+            # The trail is already on the retiring message; Slack would append it again.
+            row = {k: v for k, v in cached.items() if k != "details"}
             if row.get("status") == "in_progress":
                 row = {**row, "status": "complete", "title": f"{str(row.get('title', ''))[:250]} ⤵"}
             closing.append(row)
