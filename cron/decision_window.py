@@ -84,6 +84,15 @@ def normalize_stale_after_s(value: Any) -> Optional[float]:
     return seconds
 
 
+def validate_window_knobs(schedule: dict, window_class: Optional[str]) -> None:
+    """A ``window_class`` needs a recurring schedule: a held one-shot would be retired as missed
+    once its 120 s grace passes (``cron.missed_runs.retire_expired_oneshot``), never fired."""
+    kind = (schedule or {}).get("kind")
+    if window_class is not None and kind not in {"cron", "interval"}:
+        raise ValueError(
+            f"window_class needs a recurring schedule (cron or interval); this job's schedule kind is {kind!r}.")
+
+
 def _manual_run(job: dict) -> bool:
     """``hermes cron run`` stamps the same instant into both fields; an operator's run-now is never held."""
     return bool(job.get("manual_run_at")) and job.get("manual_run_at") == job.get("next_run_at")
