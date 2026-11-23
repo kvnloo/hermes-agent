@@ -84,6 +84,7 @@ async function servedBundle(): Promise<ServedBundle | null> {
   }
 }
 
+let bundleCheckGeneration = 0
 let reload: () => void = () => window.location.reload()
 
 function reloadOnto(id: string): void {
@@ -114,9 +115,11 @@ export async function reloadOntoServedBundle(): Promise<void> {
     return
   }
 
+  const generation = ++bundleCheckGeneration
   const served = await servedBundle()
 
-  if (served?.current && served.id && served.id !== booted && tabIdle()) {
+  // A newer reconnect or timer check may already have observed a failed rebuild.
+  if (generation === bundleCheckGeneration && served?.current && served.id && served.id !== booted && tabIdle()) {
     reloadOnto(served.id)
   }
 }
