@@ -554,7 +554,8 @@ def generate_title(
                 {"role": "assistant", "content": json.dumps({"title": title})},
                 {"role": "user", "content": f"Too long. At most {TITLE_TARGET_CHARS} characters."},
             ], timeout=timeout, main_runtime=main_runtime)
-            if shorter is not None and len(shorter) < len(title):
+            if (shorter is not None and len(shorter) < len(title)
+                    and not _is_answer_shaped(shorter) and not _is_prompt_example_echo(shorter)):
                 title = shorter
         # Answer-shaped output guard: titling is a 2-4 word task, so a title with many words is a model that
         # ignored the task and answered the user's message instead ("I don't have context on X — that's not
