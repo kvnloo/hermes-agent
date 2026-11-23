@@ -40,7 +40,7 @@ from cron.jobs_model_pin import _main_model_pin
 from cron.jobs_normalize import (
     _normalize_base_url, _normalize_context_from, _normalize_failure_deliver, _normalize_job_optional_text,
 )
-from cron import jobs_time
+from cron import decision_window, jobs_time
 from cron.scheduler_ownership import _claim_owner_is_dead
 from cron import extra_fire, jobs_error_text, store_health
 from typing import Optional, Dict, List, Any, Callable, Set, Tuple, Union, Collection
@@ -1732,6 +1732,8 @@ _CREATE_FIELD_NORMALIZERS: dict[str, Callable[[Any], Any]] = {
     "grace_minutes": jobs_time.normalize_grace_minutes,
     "catch_up": _normalize_catch_up,
     "wrap_response": normalize_wrap_response,
+    "window_class": decision_window.normalize_window_class,
+    "stale_after_s": decision_window.normalize_stale_after_s,
 }
 _UPDATE_FIELD_NORMALIZERS: dict[str, Callable[[Any], Any]] = {
     # [] is an explicit zero-tool allowlist and must survive the update path as [] too (#82010).
@@ -1747,6 +1749,8 @@ _UPDATE_FIELD_NORMALIZERS: dict[str, Callable[[Any], Any]] = {
     "grace_minutes": jobs_time.normalize_grace_minutes,
     "catch_up": _normalize_catch_up,
     "wrap_response": normalize_wrap_response,
+    "window_class": decision_window.normalize_window_class,
+    "stale_after_s": decision_window.normalize_stale_after_s,
 }
 
 
@@ -1802,6 +1806,8 @@ def create_job(
     timezone: Optional[str] = None,
     grace_minutes: Optional[int] = None,
     wrap_response: Optional[bool] = None,
+    window_class: Optional[str] = None,
+    stale_after_s: Optional[float] = None,
 ) -> dict[str, Any]:
     """Create a new cron job and return the stored record.
 
@@ -1814,7 +1820,9 @@ def create_job(
     interpreter: absolute/``~`` Python for ``.py`` script/monitor_script, validated at run time
     (a venv can be rebuilt or moved after creation). timezone: IANA key pinning the schedule's
     wall clock (None/'' = inherit the profile zone). grace_minutes: catch-up window override
-    (0 = never catch up). wrap_response: None inherits cron.wrap_response, a bool overrides it."""
+    (0 = never catch up). wrap_response: None inherits cron.wrap_response, a bool overrides it.
+    window_class / stale_after_s: the decision-window gate (``cron.decision_window``); absent =
+    fires whenever due, as before."""
     if not isinstance(paused, bool):
         raise ValueError("paused must be a boolean.")
     if paused_reason is not None and not isinstance(paused_reason, str):
@@ -1841,6 +1849,7 @@ def create_job(
 
     _validate_job_mode_invariants(f["monitor_script"], f["monitor_url"], f["no_agent"], f["script"])
     validate_schedule_knobs(parsed_schedule, f["timezone"], f["grace_minutes"])
+    decision_window.validate_window_knobs(parsed_schedule, f["window_class"])
     prompt_text = _coerce_job_text(prompt).strip()
     if not prompt_text and not f["script"] and not normalized_skills:
         raise ValueError(EMPTY_PAYLOAD_ERROR)
@@ -1906,6 +1915,7 @@ def create_job(
         ("failure_deliver", f["failure_deliver"]), ("interpreter", f["interpreter"]),
         ("timezone", f["timezone"]), ("grace_minutes", f["grace_minutes"]),
         ("catch_up", f["catch_up"]), ("wrap_response", f["wrap_response"]),
+        ("window_class", f["window_class"]), ("stale_after_s", f["stale_after_s"]),
     ):
         if value is not None:
             job[key] = value
@@ -2129,6 +2139,8 @@ def update_job(job_id: str, updates: dict[str, Any]) -> Optional[dict[str, Any]]
             # An explicit schedule/lifecycle rewrite supersedes any occurrence the dispatcher
             # left unclaimed — pause/resume/edit must not resurrect a slot from before the edit.
             updated.pop("pending_slot", None)
+        if {"schedule", "window_class"}.intersection(updates):  # after the schedule string is parsed
+            decision_window.validate_window_knobs(updated.get("schedule") or {}, updated.get("window_class"))
         _fill_missing_next_run(updated)
         _reject_terminal_activation(job, updated, job_id)
         jobs[i] = updated
