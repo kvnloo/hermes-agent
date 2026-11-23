@@ -261,10 +261,12 @@ A proactive job can say *when* it should speak, not only when it is due. Two opt
 do this; a job without them fires whenever it is due, exactly as before.
 
 - `window_class`: `peak` (asks for a decision), `trough` (a review or an easy read),
-  `wind_down` (an end-of-day question) or `anytime`. Recurring schedules only: a one-shot held
-  past its 2-minute grace would be retired as missed.
+  `wind_down` (an end-of-day question) or `anytime`.
 - `stale_after_s`: seconds after the due instant beyond which the occurrence is dropped instead
   of fired, because a late reminder is noise. It also applies to a late catch-up run.
+
+Both need a recurring schedule (cron or interval); a one-shot keeps its own grace and `catch_up`
+rules.
 
 Which window is open is answered by a **window provider** that a plugin registers with
 `ctx.register_window_provider(provider)`; `provider.current(now)` returns the open class, or
@@ -274,8 +276,8 @@ supplies one.
 
 On each tick a due job with a `window_class` fires when its window is open (or the provider says
 `anytime`). Otherwise it is **held**: no run is recorded, its due instant does not move, and
-`hermes cron list` shows the reason (`held ... outside its decision window: trough window open:
-holds the peak job`). A later
+`hermes cron list` shows the reason (`decision window at ...: Held: trough window open: holds
+the peak job; it fires once the window opens`). A later
 tick fires it once the window opens, within the job's catch-up window; past that window the
 ordinary missed-run policy applies. A stale recurring occurrence is dropped and the job moves to
 its next slot. `hermes cron run` is never held.

@@ -7,8 +7,9 @@ For the rest, ``cron.decision_window.gate`` decides. A held job is skipped like 
 skips agent jobs (``cron.scheduler_gateway_gate``): no run is recorded, the due instant does not
 move, the dispatch marks the scan wrote are dropped and ``last_fire_error`` carries the reason, so
 a later tick fires it once the window opens (within the job's catch-up window; past it the due
-scan's ordinary missed-run policy applies). A stale recurring occurrence is dropped instead: the
-job advances to its next slot, because a late proactive message is noise.
+scan's ordinary missed-run policy applies). A stale occurrence is dropped instead: the job advances
+to its next slot, because a late proactive message is noise. Both fields need a recurring
+schedule (``cron.decision_window.validate_window_knobs``).
 """
 import logging
 
@@ -44,7 +45,7 @@ def _note_held(held: dict[str, str]) -> None:
             reason = held.get(str(job["id"]))
             if reason is None:
                 continue
-            job["last_fire_error"] = {"at": at, "detail": f"Held: {reason}"[:500], "kind": WINDOW_HOLD}
+            job["last_fire_error"] = {"at": at, "detail": reason[:500], "kind": WINDOW_HOLD}
             job.pop("pending_slot", None)
             if job.get("run_claim") is not None:
                 job["run_claim"] = None
@@ -61,14 +62,20 @@ def hold_outside_window(due_jobs: list) -> list:
     provider = resolve_window_provider()
     now = _hermes_now()
     held: dict[str, str] = {}
+    stale: list[str] = []
     for job in gated:
         fire, reason = gate(job, now, provider)
-        if not fire:
-            held[str(job["id"])] = reason
+        if fire:
+            continue
+        if is_stale(job, now):
+            stale.append(str(job["id"]))
+            held[str(job["id"])] = f"Dropped: {reason}; the job moved to its next slot"
+        else:
+            held[str(job["id"])] = f"Held: {reason}; it fires once the window opens"
     if not held:
         return due_jobs
     _note_held(held)
-    advance_next_runs([str(job["id"]) for job in gated if str(job["id"]) in held and is_stale(job, now)])
+    advance_next_runs(stale)
     logger.debug("Cron tick held %d job(s) outside their decision window: %s", len(held),
                  "; ".join(f"{job_id}: {reason}" for job_id, reason in held.items()))
     return [job for job in due_jobs if str(job["id"]) not in held]

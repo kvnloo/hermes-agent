@@ -281,8 +281,7 @@ def _delivery_fix_hint(job: dict[str, Any]) -> str:
 
 def _missed_fire_issue(job: dict[str, Any], fire_err: dict[str, Any]) -> str:
     if fire_err.get("kind") == "window_hold":  # cron.scheduler_window_gate: a hold, not an outage
-        return (f"held at {fire_err.get('at', '?')} outside its decision window: "
-                f"{_short_reason(fire_err['detail'].removeprefix('Held: '))}. It fires on a later tick once the window opens.")
+        return f"decision window at {fire_err.get('at', '?')}: {_short_reason(fire_err['detail'])}."
     return (f"missed scheduled fire at {fire_err.get('at', '?')}: {_short_reason(fire_err['detail'])}. "
             "The messaging gateway was unreachable. Run `hermes gateway restart`, then "
             f"`hermes cron run {job.get('id', '<id>')}` to run it now.")
