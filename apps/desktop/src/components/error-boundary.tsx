@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { ErrorState } from '@/components/ui/error-state'
 import { useI18n } from '@/i18n'
 import { requestSendDiagnostics } from '@/store/send-diagnostics'
+import { getClassicShellRecovery } from '@/store/shell-presentation'
 
 export interface ErrorBoundaryFallbackProps {
   error: Error
@@ -144,7 +145,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       return this.props.fallback({ error, reset: this.reset })
     }
 
-    return <RootErrorFallback error={error} reset={this.reset} />
+    return <RootErrorFallback error={error} reset={this.reset} root={this.props.label === 'root'} />
   }
 }
 
@@ -152,8 +153,9 @@ export function RootErrorBoundary({ children }: { children: ReactNode }) {
   return <ErrorBoundary label="root">{children}</ErrorBoundary>
 }
 
-function RootErrorFallback({ error, reset }: ErrorBoundaryFallbackProps) {
+function RootErrorFallback({ error, reset, root }: ErrorBoundaryFallbackProps & { root: boolean }) {
   const { t } = useI18n()
+  const recoverClassic = root ? getClassicShellRecovery() : undefined
 
   return (
     <div
@@ -182,6 +184,17 @@ function RootErrorFallback({ error, reset }: ErrorBoundaryFallbackProps) {
         <Button className="font-semibold" onClick={reset} size="lg">
           {t.common.retry}
         </Button>
+        {recoverClassic ? (
+          <Button
+            onClick={() => {
+              recoverClassic()
+              reset()
+            }}
+            variant="text"
+          >
+            {t.simplifiedAgents.switchToClassic}
+          </Button>
+        ) : null}
         <Button onClick={() => window.location.reload()} variant="text">
           {t.errors.reloadWindow}
         </Button>

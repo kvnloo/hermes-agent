@@ -27,7 +27,9 @@ export const rendersPortalShell = (choice: boolean | null): boolean => choice !=
 export const $portalShell = computed($shellChoice, rendersPortalShell)
 
 // The icon layer reads this through the dependency-free `shell-presentation` leaf.
-providePortalPresentation($portalShell)
+providePortalPresentation($portalShell, () =>
+  rendersPortalShell($shellChoice.get()) ? () => setPortalPreferred(false) : undefined
+)
 
 export function usePortalShell(): boolean {
   return useStore($portalShell)

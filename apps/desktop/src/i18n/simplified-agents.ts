@@ -3,6 +3,7 @@ import type { BundledLocale } from './types'
 
 export interface SimplifiedAgentsCopy {
   title: string
+  switchToClassic: string
   description: string
   chats: string
   agents: string
@@ -38,6 +39,7 @@ export interface SimplifiedAgentsCopy {
 export const simplifiedAgentsCopy: Record<BundledLocale, SimplifiedAgentsCopy> = {
   en: {
     title: 'Redesigned interface',
+    switchToClassic: 'Switch to classic',
     description: 'Use the new navigation, sidebar, and chat layout. Turn off to restore the classic interface.',
     chats: 'Chats',
     agents: 'Agents',
@@ -66,6 +68,7 @@ export const simplifiedAgentsCopy: Record<BundledLocale, SimplifiedAgentsCopy> =
   },
   fr: {
     title: 'Interface repensée',
+    switchToClassic: 'Revenir à l’interface classique',
     description:
       'Utiliser la nouvelle navigation, la barre latérale et la disposition des discussions. Désactiver pour retrouver l’interface classique.',
     chats: 'Discussions',
@@ -95,6 +98,7 @@ export const simplifiedAgentsCopy: Record<BundledLocale, SimplifiedAgentsCopy> =
   },
   de: {
     title: 'Neue Benutzeroberfläche',
+    switchToClassic: 'Zur klassischen Oberfläche wechseln',
     description:
       'Neue Navigation, Seitenleiste und Chatansicht verwenden. Ausschalten, um zur klassischen Oberfläche zurückzukehren.',
     chats: 'Chats',
@@ -124,6 +128,7 @@ export const simplifiedAgentsCopy: Record<BundledLocale, SimplifiedAgentsCopy> =
   },
   es: {
     title: 'Interfaz rediseñada',
+    switchToClassic: 'Cambiar a la interfaz clásica',
     description:
       'Usar la nueva navegación, barra lateral y distribución del chat. Desactivar para volver a la interfaz clásica.',
     chats: 'Chats',
@@ -153,6 +158,7 @@ export const simplifiedAgentsCopy: Record<BundledLocale, SimplifiedAgentsCopy> =
   },
   ja: {
     title: '新しいインターフェース',
+    switchToClassic: '従来のインターフェースに切り替える',
     description:
       '新しいナビゲーション、サイドバー、チャットレイアウトを使用します。オフにすると従来のインターフェースに戻ります。',
     chats: 'チャット',
@@ -182,6 +188,7 @@ export const simplifiedAgentsCopy: Record<BundledLocale, SimplifiedAgentsCopy> =
   },
   zh: {
     title: '全新界面',
+    switchToClassic: '切换到经典界面',
     description: '使用全新的导航、侧边栏和对话布局。关闭后恢复经典界面。',
     chats: '对话',
     agents: '智能体',
@@ -210,6 +217,7 @@ export const simplifiedAgentsCopy: Record<BundledLocale, SimplifiedAgentsCopy> =
   },
   'zh-hant': {
     title: '全新介面',
+    switchToClassic: '切換至經典介面',
     description: '使用全新的導覽、側邊欄和對話版面。關閉後恢復經典介面。',
     chats: '對話',
     agents: '智慧體',
@@ -238,6 +246,7 @@ export const simplifiedAgentsCopy: Record<BundledLocale, SimplifiedAgentsCopy> =
   },
   ru: {
     title: 'Обновлённый интерфейс',
+    switchToClassic: 'Переключиться на классический интерфейс',
     description: 'Новая навигация, боковая панель и оформление чата. Выключите, чтобы вернуть классический интерфейс.',
     chats: 'Чаты',
     agents: 'Агенты',
@@ -266,6 +275,7 @@ export const simplifiedAgentsCopy: Record<BundledLocale, SimplifiedAgentsCopy> =
   },
   ar: {
     title: 'الواجهة الجديدة',
+    switchToClassic: 'التبديل إلى الواجهة الكلاسيكية',
     description: 'استخدم التنقل والشريط الجانبي وتخطيط المحادثات الجديد. أوقف الخيار لاستعادة الواجهة الكلاسيكية.',
     chats: 'المحادثات',
     agents: 'الوكلاء',

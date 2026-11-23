@@ -10,9 +10,17 @@ import { atom, type ReadableAtom } from 'nanostores'
  * so nothing evaluates at import.
  */
 let source: ReadableAtom<boolean> = atom(false)
+let getRecovery: (() => (() => void) | undefined) | undefined
 
-export function providePortalPresentation(store: ReadableAtom<boolean>): void {
+export function providePortalPresentation(store: ReadableAtom<boolean>, recovery?: () => (() => void) | undefined): void {
   source = store
+  getRecovery = recovery
+}
+
+/** Available only in a window using the redesign. The root crash screen can
+ * offer rollback without importing the application stores into the boundary. */
+export function getClassicShellRecovery(): (() => void) | undefined {
+  return getRecovery?.()
 }
 
 export function usePortalPresentation(): boolean {
