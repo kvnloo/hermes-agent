@@ -1849,7 +1849,7 @@ def create_job(
 
     _validate_job_mode_invariants(f["monitor_script"], f["monitor_url"], f["no_agent"], f["script"])
     validate_schedule_knobs(parsed_schedule, f["timezone"], f["grace_minutes"])
-    decision_window.validate_window_knobs(parsed_schedule, f["window_class"])
+    decision_window.validate_window_knobs(parsed_schedule, f["window_class"], f["stale_after_s"])
     prompt_text = _coerce_job_text(prompt).strip()
     if not prompt_text and not f["script"] and not normalized_skills:
         raise ValueError(EMPTY_PAYLOAD_ERROR)
@@ -2139,8 +2139,9 @@ def update_job(job_id: str, updates: dict[str, Any]) -> Optional[dict[str, Any]]
             # An explicit schedule/lifecycle rewrite supersedes any occurrence the dispatcher
             # left unclaimed — pause/resume/edit must not resurrect a slot from before the edit.
             updated.pop("pending_slot", None)
-        if {"schedule", "window_class"}.intersection(updates):  # after the schedule string is parsed
-            decision_window.validate_window_knobs(updated.get("schedule") or {}, updated.get("window_class"))
+        if {"schedule", "window_class", "stale_after_s"}.intersection(updates):  # after the schedule is parsed
+            decision_window.validate_window_knobs(
+                updated.get("schedule") or {}, updated.get("window_class"), updated.get("stale_after_s"))
         _fill_missing_next_run(updated)
         _reject_terminal_activation(job, updated, job_id)
         jobs[i] = updated

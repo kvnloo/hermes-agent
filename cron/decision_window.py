@@ -84,13 +84,15 @@ def normalize_stale_after_s(value: Any) -> Optional[float]:
     return seconds
 
 
-def validate_window_knobs(schedule: dict, window_class: Optional[str]) -> None:
-    """A ``window_class`` needs a recurring schedule: a held one-shot would be retired as missed
-    once its 120 s grace passes (``cron.missed_runs.retire_expired_oneshot``), never fired."""
+def validate_window_knobs(schedule: dict, window_class: Optional[str], stale_after_s: Optional[float]) -> None:
+    """Both fields need a recurring schedule: a one-shot's own grace and ``catch_up`` policy
+    (``cron.missed_runs.retire_expired_oneshot``) decides a late one-shot, and a held one-shot
+    would be retired as missed once its 120 s grace passes, never fired."""
     kind = (schedule or {}).get("kind")
-    if window_class is not None and kind not in {"cron", "interval"}:
-        raise ValueError(
-            f"window_class needs a recurring schedule (cron or interval); this job's schedule kind is {kind!r}.")
+    for name, value in (("window_class", window_class), ("stale_after_s", stale_after_s)):
+        if value is not None and kind not in {"cron", "interval"}:
+            raise ValueError(
+                f"{name} needs a recurring schedule (cron or interval); this job's schedule kind is {kind!r}.")
 
 
 def _manual_run(job: dict) -> bool:

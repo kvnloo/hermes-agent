@@ -101,10 +101,12 @@ def test_create_job_rejects_bad_window_fields(cron_home):
     assert J.load_jobs() == []
 
 
-def test_a_one_shot_cannot_wait_for_a_window(cron_home):
+def test_window_fields_need_a_recurring_schedule(cron_home):
     run_at = (J._hermes_now() + timedelta(hours=1)).replace(microsecond=0).isoformat()
     with pytest.raises(ValueError, match="recurring"):
         J.create_job(prompt="x", schedule=run_at, window_class="peak")
+    with pytest.raises(ValueError, match="recurring"):
+        J.create_job(prompt="x", schedule=run_at, stale_after_s=600)
 
 
 def test_update_job_sets_and_clears_the_window_fields(cron_home):
@@ -144,6 +146,7 @@ def test_held_job_keeps_its_due_instant_and_says_why(cron_home, dispatched, monk
     assert "pending_slot" not in stored and stored["last_run_at"] is None
     detail = stored["last_fire_error"]["detail"]
     assert detail.startswith("Held:") and "trough" in detail and "peak" in detail
+    assert "once" in detail and "window opens" in detail
 
 
 def test_held_job_fires_on_the_tick_its_window_opens(cron_home, dispatched, monkeypatch):
@@ -172,7 +175,8 @@ def test_stale_recurring_occurrence_is_dropped_and_the_job_moves_on(cron_home, d
     assert stored["next_run_at"] != due
     assert J._instant_after(J._ensure_aware(J.datetime.fromisoformat(stored["next_run_at"])), J._hermes_now())
     assert "pending_slot" not in stored
-    assert "stale" in stored["last_fire_error"]["detail"]
+    detail = stored["last_fire_error"]["detail"]
+    assert detail.startswith("Dropped:") and "stale" in detail and "next slot" in detail
 
 
 def test_a_profile_distribution_keeps_the_window_fields(cron_home):
