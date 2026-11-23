@@ -460,7 +460,12 @@ async def search_sessions(
             return {"results": list(seen.values())}
 
         # FTS over a large state.db is the slowest read here; keep it off the loop (#60747).
-        return await asyncio.to_thread(_with_db, profile, _search, read_only=True)
+        try:
+            return await asyncio.to_thread(_with_db, profile, _search, read_only=True)
+        except sqlite3.OperationalError as exc:
+            if is_transient_sqlite_error(exc):
+                raise HTTPException(status_code=503, detail="Session store is busy. Retry search.") from exc
+            raise
 
 
 @manage_router.post("/api/sessions/bulk-delete")
