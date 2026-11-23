@@ -18,6 +18,7 @@ OpenAPI schema declares; unsupported knobs are dropped with a stderr note, never
 from __future__ import annotations
 
 import argparse
+import http.client
 import json
 import os
 import posixpath
@@ -257,8 +258,15 @@ def generate(model: str, endpoint: str, payload: dict[str, Any], output: Optiona
         output = os.path.join(os.getcwd(), f"fal-3d-{model}.{ext}")
     elif not os.path.splitext(output)[1]:
         output = f"{output}.{ext}"
-    with urllib.request.urlopen(url, timeout=300) as resp, open(output, "wb") as fh:
-        fh.write(resp.read())
+    try:
+        with urllib.request.urlopen(url, timeout=300) as resp:
+            mesh = resp.read()
+        with open(output, "xb") as fh:
+            fh.write(mesh)
+    except FileExistsError as exc:
+        raise SystemExit(f"mesh generated, but {output} already exists; use another -o path or download {url}") from exc
+    except (OSError, http.client.HTTPException) as exc:
+        raise SystemExit(f"mesh generated, but saving {url} to {output} failed: {exc}") from exc
     preview = _file_url(result.get("thumbnail") or result.get("rendered_image"))
     raw_urls = result.get("model_urls")
     urls: dict[str, Any] = raw_urls if isinstance(raw_urls, dict) else {}
