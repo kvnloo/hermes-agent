@@ -300,12 +300,13 @@ class WorkLedger:
         """Extend an unexpired lease; same generation. Fails closed once expired (rooms ``renew_lease``)."""
         at, window = _now(now), _ttl(ttl)
         with self._txn() as conn:
-            fenced_update(conn, f"UPDATE work_units SET expires_at=?, updated_at=? WHERE {_FENCE} "
+            fenced_update(conn, f"UPDATE work_units SET expires_at=MAX(expires_at, ?), updated_at=? WHERE {_FENCE} "
                           "AND expires_at > ?", (at + window, at, lease.unit_id, lease.generation,
                                                  lease.holder_id, at),
                           StaleLeaseError(f"lease g{lease.generation} on {lease.unit_id} is stale or expired"))
-            _append_event(conn, lease.unit_id, "renewed", at, {"generation": lease.generation, "expires_at": at + window})
-        return Lease(lease.unit_id, lease.holder_id, lease.generation, at + window)
+            expires_at = self._load(conn, lease.unit_id)["expires_at"]
+            _append_event(conn, lease.unit_id, "renewed", at, {"generation": lease.generation, "expires_at": expires_at})
+        return Lease(lease.unit_id, lease.holder_id, lease.generation, expires_at)
 
     def settle(self, lease: Lease, settlement_id: str, outcome: str, result: Any = None, *,
                now: float | None = None) -> Settlement:
