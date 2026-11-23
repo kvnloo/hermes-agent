@@ -149,3 +149,14 @@ def test_event_log_has_one_event_per_transition_with_contiguous_seq(ledger):
     assert [e.seq for e in events] == list(range(1, len(events) + 1))
     assert [e.data.get("generation") for e in events if e.kind == "claimed"] == [1, 2, 3]
     assert events[-1].data == {"from": "claimed", "to": "settled", "settlement_id": "s1", "generation": 3}
+
+
+def test_renew_with_shorter_ttl_does_not_cut_existing_lease(ledger):
+    ledger.admit("u1", "retry", {}, now=T0)
+    lease = _claim(ledger, ttl=30)
+    renewed = ledger.renew(lease, 5, now=T0 + 1)
+
+    # A renewal cannot make the existing 30-second lease reclaimable after six seconds.
+    assert ledger.reclaim_expired(DEAD, now=T0 + 6) == []
+    assert renewed.expires_at == lease.expires_at
+    assert ledger.events("u1")[-1].data["expires_at"] == lease.expires_at
