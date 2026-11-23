@@ -8,7 +8,9 @@ the same pattern as feishu_comment.py.
 """
 
 import json
+from functools import wraps
 
+from tools.arg_validation import flag_unknown_args
 from tools.registry import tool_error, tool_result
 
 
@@ -317,9 +319,25 @@ _TOOLS = (
 )
 
 
+def _with_parameter_feedback(schema, handler):
+    """Preserve the former built-in warning without changing accepted arguments."""
+    name = schema["name"]
+    properties = schema["parameters"]["properties"]
+    valid = ", ".join(properties)
+
+    @wraps(handler)
+    def wrapped(args, **kwargs):
+        result = handler(args, **kwargs)
+        unknown = [key for key in args if key not in properties]
+        return flag_unknown_args(result, name, unknown, valid)
+
+    return wrapped
+
+
 def register_tools(ctx) -> None:
     """Register the five comment-agent tools in the ``feishu_doc`` and ``feishu_drive`` toolsets."""
     for schema, handler, toolset, description, emoji in _TOOLS:
         ctx.register_tool(
-            name=schema["name"], toolset=toolset, schema=schema, handler=handler,
+            name=schema["name"], toolset=toolset, schema=schema,
+            handler=_with_parameter_feedback(schema, handler),
             check_fn=_check_feishu, requires_env=[], is_async=False, description=description, emoji=emoji)
