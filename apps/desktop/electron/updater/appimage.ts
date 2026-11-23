@@ -21,7 +21,7 @@ export interface AppImageStrategyDeps {
   emitProgress: (payload: { stage: string; message: string; percent: number | null }) => void
 }
 
-/** The install unlinks the AppImage and moves the new one in beside it, so its folder must be writable. */
+/** The install stages the new AppImage next to the old one, so its folder must be writable. */
 export function appImageReplaceable(appImage: string): boolean {
   try {
     fs.accessSync(path.dirname(appImage), fs.constants.W_OK | fs.constants.X_OK)

@@ -1,8 +1,10 @@
+import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 
 import electronUpdater from 'electron-updater'
 import type { AppAdapter } from 'electron-updater/out/AppAdapter'
+import type { InstallOptions } from 'electron-updater/out/BaseUpdater'
 import { load } from 'js-yaml'
 
 import feedContract from '../../update-feed.cjs'
@@ -53,6 +55,45 @@ export class RelaunchingAppImageUpdater extends electronUpdater.AppImageUpdater 
     app?: AppAdapter
   ) {
     super(undefined, app)
+  }
+
+  protected override doInstall(options: InstallOptions): boolean {
+    const current = process.env.APPIMAGE
+    const downloaded = this.installerPath
+
+    if (!current || !path.isAbsolute(current) || current.includes('\0') || !downloaded) {
+      throw new Error('Cannot install the update without valid current and downloaded AppImage paths.')
+    }
+
+    const folder = path.dirname(current)
+    const name = path.basename(current)
+    const destination = /\d+\.\d+\.\d+/.test(name) ? path.join(folder, path.basename(downloaded)) : current
+    // The download cache can be on another filesystem. Stage beside the install so
+    // the final rename is atomic and no failure in staging can remove the old image.
+    const staging = fs.mkdtempSync(path.join(folder, '.hermes-update-'))
+    const staged = path.join(staging, 'update.AppImage')
+
+    try {
+      fs.copyFileSync(downloaded, staged, fs.constants.COPYFILE_FICLONE)
+      fs.renameSync(staged, destination)
+    } finally {
+      fs.rmSync(staging, { recursive: true, force: true })
+    }
+
+    if (destination !== current) {
+      fs.unlinkSync(current)
+      this.emit('appimage-filename-updated', destination)
+    }
+
+    const env: NodeJS.ProcessEnv = { ...process.env, APPIMAGE_SILENT_INSTALL: 'true' }
+
+    if (options.isForceRunAfter) {
+      void this.spawnLog(destination, [], env)
+    } else {
+      execFileSync(destination, [], { env: { ...env, APPIMAGE_EXIT_AFTER_INSTALL: 'true' } })
+    }
+
+    return true
   }
 
   protected override spawnLog(command: string, _args?: string[], env?: NodeJS.ProcessEnv): Promise<boolean> {
