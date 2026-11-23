@@ -127,3 +127,15 @@ def test_affordable_402_classifies_as_billing_with_a_parseable_budget():
 def test_not_a_multimodal_model_is_an_image_rejection():
     body = str(_status(openai.BadRequestError, 400, NOT_MULTIMODAL_400))
     assert _looks_like_image_content_rejection(body), f"image rejection not recognised: {body[:120]}"
+
+
+@pytest.mark.parametrize("message", [
+    "The input you provided is invalid [code=30003]",
+    "The input you provided is invalid: metadata size exceeds the configured limit",
+])
+def test_non_stepfun_descriptive_400_stays_a_format_error_mid_window(message):
+    error = _status(openai.BadRequestError, 400, {"error": {
+        "type": "invalid_request_error", "message": message}})
+    result = classify_api_error(error, provider="custom", model="test-model",
+                                approx_tokens=60000, context_length=100000, num_messages=60)
+    assert (result.reason, result.should_compress) == (FailoverReason.format_error, False)
