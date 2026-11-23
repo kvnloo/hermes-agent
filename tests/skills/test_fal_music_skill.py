@@ -71,3 +71,41 @@ def test_declared_generic_knobs_are_wired(model, capsys):
     for knob, keys in KNOB_KEYS.items():
         if keys & DECLARED[model] and (model, knob) not in NOT_WIRED:
             assert keys & set(payload), f"{model} declares {sorted(keys & DECLARED[model])} but {knob} is not wired"
+
+
+@pytest.mark.parametrize("duration", ["nan", "inf", "0", "-1"])
+def test_invalid_duration_is_rejected_before_generation(monkeypatch, duration):
+    monkeypatch.setattr(fal_music, "generate", lambda *args: pytest.fail("invalid duration reached generation"))
+    with pytest.raises(SystemExit) as exc:
+        fal_music.main(["--prompt", "test", f"--duration={duration}"])
+    assert exc.value.code == 2
+
+
+def test_interrupted_audio_download_leaves_no_output(monkeypatch, tmp_path):
+    from io import BytesIO
+    from types import SimpleNamespace
+
+    class InterruptedDownload(BytesIO):
+        def read(self, size=-1):
+            chunk = super().read(size)
+            if not chunk:
+                raise TimeoutError("mock download timed out")
+            return chunk
+
+    destination = tmp_path / "downloads"
+    destination.mkdir()
+    output = destination / "track.mp3"
+    monkeypatch.setattr(fal_music, "os", SimpleNamespace(
+        environ={"FAL_KEY": "offline-test"},
+        replace=fal_music.os.replace,
+    ))
+    monkeypatch.setitem(sys.modules, "fal_client", SimpleNamespace(
+        subscribe=lambda *args, **kwargs: {"audio": {"url": "https://example.invalid/track.mp3"}},
+    ))
+    monkeypatch.setattr(fal_music.urllib.request, "urlopen",
+                        lambda *args, **kwargs: InterruptedDownload(b"partial audio"))
+
+    with pytest.raises(SystemExit, match="generated, but saving .* mock download timed out"):
+        fal_music.generate(fal_music.DEFAULT_MODEL, {"prompt": "test"}, str(output))
+
+    assert not list(destination.iterdir())
