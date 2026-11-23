@@ -529,12 +529,13 @@ def loop_stall_message(drift: float, cpu_used: float) -> tuple[int, str] | None:
 
     A GIL stall keeps some thread busy, so the process burns CPU through it. A computer that slept
     drifts the tick too (Windows' monotonic clock counts sleep), but the process gets no CPU while
-    asleep or frozen by Modern Standby.
+    asleep or frozen by Modern Standby. An awake loop blocked on synchronous I/O can also use
+    very little CPU, so low CPU alone does not identify the cause.
     """
     if drift <= _LOOP_STALL_THRESHOLD_S:
         return None
     if cpu_used < drift / 4:
-        return logging.INFO, f"event loop paused {drift:.0f}s with the process idle (the computer was probably asleep)"
+        return logging.INFO, f"event loop paused {drift:.1f}s with low process CPU (cause unknown)"
     return logging.WARNING, f"event loop stalled {drift:.1f}s (GIL pressure suspected)"
 
 

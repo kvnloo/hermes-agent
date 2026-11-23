@@ -25,7 +25,7 @@ def test_a_punctual_tick_logs_nothing():
 def test_a_sleeping_computer_is_not_called_gil_pressure():
     level, line = loop_stall_message(229.0, 0.2)
     assert level == logging.INFO
-    assert "probably asleep" in line and "GIL" not in line
+    assert line == "event loop paused 229.0s with low process CPU (cause unknown)"
 
 
 def test_a_busy_process_stall_still_warns():
@@ -52,7 +52,7 @@ def test_heartbeat_reports_a_late_tick_through_the_loop(monkeypatch):
     fn, args = scheduled.pop()
     clock["t"] = args[0] + 64.0
     fn(*args)
-    assert logged == [(logging.INFO, "event loop paused 64s with the process idle (the computer was probably asleep)")]
+    assert logged == [(logging.INFO, "event loop paused 64.0s with low process CPU (cause unknown)")]
     assert scheduled  # the next tick is armed
 
 
