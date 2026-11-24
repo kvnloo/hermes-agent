@@ -111,6 +111,7 @@ def _inline_programs(command: str):
         name = deobfuscate(word)
         family = own = "applescript" if os.path.basename(name).lower() == "osascript" else _interpreter_family(name)
         heredoc = _heredoc_operator(args)
+        heredocs = _heredoc_operators(args) if heredoc is not None else []
         if family is None and heredoc is not None:
             # `cat <<'PY' | python3`: the body is the program of the interpreter the line pipes into.
             line_end = command.find("\n", end)
@@ -119,7 +120,14 @@ def _inline_programs(command: str):
         if family is None:
             continue
         if heredoc is not None:
-            body, body_span = _heredoc_body(command, start + len(segment), heredoc[0], heredoc[2])
+            # Bodies follow one another; the interpreter's stdin is the LAST redirection's body.
+            body_start = start + len(segment)
+            for delim, _quoted, strip_tabs in heredocs or [heredoc]:
+                body, body_span = _heredoc_body(command, body_start, delim, strip_tabs)
+                body_start = body_span[1]
+            if strip_tabs:  # `<<-` strips leading tabs from every body line before the program sees it
+                body = re.sub(r"(?m)^\t+", "", body)
+            body_span = (start + len(segment), body_span[1])
             yield family, body
         if own == "applescript":
             yield family, _osascript_program(args, _PROGRAMS["osascript"])[0]
@@ -129,21 +137,56 @@ def _inline_programs(command: str):
             yield family, payload
 
 
+def _heredoc_operators(args: str) -> list[tuple[str, bool, bool]]:
+    """Every unquoted ``<<`` operator in *args*, in order (see ``_heredoc_operator``); empty when any
+    delimiter is not a plain word."""
+    from tools.approval_applescript import _HEREDOC_RE
+    from tools.approval_detection import _scan_shell
+
+    found = []
+    for kind, i, _, quote in _scan_shell(args):
+        if kind == "char" and quote is None and args.startswith("<<", i) and not args.startswith("<<<", i) \
+                and (i == 0 or args[i - 1] != "<"):
+            match = _HEREDOC_RE.match(args, i)
+            if match is None:
+                return []
+            found.append((match.group("delim"), bool(match.group("q")), bool(match.group("dash"))))
+    return found
+
+
 def _flag_payload(family: str, args: list[str]) -> str | None:
-    """The program text an execution flag owns (``-c CODE``, ``--eval=CODE``, ``-le CODE``, ``eval CODE``)."""
-    from tools.approval_detection import _interpreter_exec_flag, _powershell_command_payload
+    """The program text an execution flag owns (``-c CODE``, ``-cCODE``, ``--eval=CODE``, ``-le CODE``,
+    ``eval CODE``). One walk with the same option-value ownership as ``_interpreter_exec_flag``, so a
+    value such as ``-W -c`` is never taken for the flag."""
+    from tools.approval_detection import _INTERPRETER_EXEC_FLAGS, _INTERPRETER_WITH_ARG, _powershell_command_payload
     if family == "powershell":
         return _powershell_command_payload(args)
-    flag = _interpreter_exec_flag(family, args)
-    if flag is None:
-        return None
+    flags, with_arg = _INTERPRETER_EXEC_FLAGS[family], _INTERPRETER_WITH_ARG[family]
+    skip_value = False
     for index, token in enumerate(args):
+        if skip_value:
+            skip_value = False
+            continue
+        rest = args[index + 1:]
+        if token == "--" or not token.startswith("-"):
+            if family == "deno" and token.lower() == "eval":
+                # `deno eval --ext=ts CODE`: eval's own options come before the program.
+                return next((arg for arg in rest if not arg.startswith("-")), None)
+            return None
         option, equals, value = token.partition("=")
-        if option == flag and equals:
-            return value
-        bundled = len(flag) == 2 and token[:1] == "-" and token[1:2] != "-" and token.endswith(flag[1])
-        if option == flag or bundled:
-            return next(iter(args[index + 1:]), None)
+        if option in flags:
+            return value if equals else next(iter(rest), None)
+        if option.startswith("--"):
+            skip_value = option in with_arg and not equals
+            continue
+        attached = next((short for short in with_arg if short.startswith("-") and not short.startswith("--")
+                         and option.startswith(short) and len(option) > len(short)), None)
+        if attached is None:
+            # A short bundle: the first execution flag in it owns the rest of the token, else the next one.
+            for position, char in enumerate(token[1:], 1):
+                if f"-{char}" in flags:
+                    return token[position + 1:] or next(iter(rest), None)
+        skip_value = option in with_arg and not equals
     return None
 
 
@@ -160,26 +203,80 @@ def _screen_python(_language: str, source: str) -> tuple[list[str], list[str]]:
         elif isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
             assigned[node.targets[0].id] = node.value
 
-    def qualname(func) -> str | None:
+    def qualname(func, depth: int = 0) -> str | None:
         parts = []
         while isinstance(func, ast.Attribute):
             parts.append(func.attr)
             func = func.value
+        if isinstance(func, ast.Call) and depth < 3 and isinstance(func.func, ast.Name) \
+                and func.func.id == "getattr" and len(func.args) >= 2 and isinstance(func.args[1], ast.Constant) \
+                and isinstance(func.args[1].value, str):
+            # getattr(subprocess, 'run')
+            base = qualname(func.args[0], depth + 1)
+            return ".".join([base, func.args[1].value, *reversed(parts)]) if base else None
         if not isinstance(func, ast.Name):
             return None
+        bound = assigned.get(func.id)
+        if depth < 3 and func.id not in aliases and isinstance(bound, (ast.Attribute, ast.Call)):
+            # run = subprocess.run
+            base = qualname(bound, depth + 1)
+            return ".".join([base, *reversed(parts)]) if base else None
         return ".".join([aliases.get(func.id, func.id), *reversed(parts)])
+
+    def first_arg(node):
+        """The command argument: first positional, else ``args=``/``cmd=``/``command=``."""
+        if node.args:
+            return node.args[0]
+        return next((kw.value for kw in node.keywords if kw.arg in ("args", "cmd", "command")), None)
+
+    def resolved(arg):
+        return assigned.get(arg.id, arg) if isinstance(arg, ast.Name) else arg
+
+    def path_text(node, depth: int = 0) -> str:
+        """Literal text of a path expression with local string variables substituted."""
+        if isinstance(node, ast.Name) and node.id in assigned and depth < 3:
+            return path_text(assigned[node.id], depth + 1)
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            return node.value
+        if isinstance(node, ast.JoinedStr):
+            return "".join(path_text(v.value if isinstance(v, ast.FormattedValue) else v, depth) for v in node.values)
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+            return path_text(node.left, depth) + path_text(node.right, depth)
+        if isinstance(node, ast.Call) and node.args and (qualname(node.func) or "").endswith(
+                ("expanduser", "abspath", "realpath", "normpath")):
+            return path_text(node.args[0], depth)
+        if isinstance(node, ast.Call) and (qualname(node.func) or "").endswith("join") and node.args:
+            return "/".join(path_text(a, depth) for a in node.args)
+        return "x"
+
+    # Local helpers that hand one of their parameters to a spawn API: def sh(c): subprocess.run(c, ...)
+    helpers = {}
+    for fn in ast.walk(tree):
+        if isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            params = [a.arg for a in fn.args.posonlyargs + fn.args.args]
+            for inner in ast.walk(fn):
+                if isinstance(inner, ast.Call) and qualname(inner.func) in _PY_SPAWN:
+                    arg = first_arg(inner)
+                    if isinstance(arg, ast.Name) and arg.id in params:
+                        helpers[fn.name] = params.index(arg.id)
 
     shells, findings, fetches, execs = [], [], False, False
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
             continue
         name = qualname(node.func)
-        arg = node.args[0] if node.args else None
-        if name in _PY_SPAWN and arg is not None and (text := _py_text(arg)) is not None:
+        arg = first_arg(node)
+        if isinstance(node.func, ast.Name) and node.func.id in helpers and name not in _PY_SPAWN:
+            index = helpers[node.func.id]
+            arg = node.args[index] if index < len(node.args) else None
+            name = "subprocess.run"
+        if name in _PY_SPAWN and arg is not None and (text := _py_text(resolved(arg))) is not None:
             shells.append(text)
         elif name in _PY_DELETE and arg is not None:
-            target = assigned.get(arg.id, arg) if isinstance(arg, ast.Name) else arg
-            if _HOME_OR_ROOT_RE.search(ast.unparse(target)):
+            target = resolved(arg)
+            if _HOME_OR_ROOT_RE.search(ast.unparse(target)) or _HOME_OR_ROOT_RE.search(repr(path_text(arg))) \
+                    or any(isinstance(n, ast.Name) and n.id in assigned
+                           and _HOME_OR_ROOT_RE.search(ast.unparse(assigned[n.id])) for n in ast.walk(arg)):
                 findings.append(INLINE_DELETE_DESCRIPTION)
         fetches = fetches or name in _PY_FETCH
         execs = execs or name in _PY_EXEC
@@ -192,13 +289,56 @@ def _screen_regex(language: str, source: str) -> tuple[list[str], list[str]]:
     lang = _LANGUAGE.get(language, language)
     if lang == "powershell":
         return [], []  # a `pwsh -c` payload already reaches the shell detectors (_powershell_command_payload)
-    shells = [_call_strings(source, m.end()) for m in _SPAWN_RES[lang].finditer(source)] if lang in _SPAWN_RES else []
+    code = _code_mask(lang, source)
+
+    def in_code(regex):
+        """Matches that start in code, not inside a string literal or a comment (prose)."""
+        return [m for m in regex.finditer(source) if code[m.start()]]
+
+    shells = [_call_strings(source, m.end()) for m in in_code(_SPAWN_RES[lang])] if lang in _SPAWN_RES else []
     if lang in _SUBST_RES:
         shells += [next(filter(None, m.groups()), "").replace('\\"', '"') for m in _SUBST_RES[lang].finditer(source)]
-    findings = [INLINE_DELETE_DESCRIPTION] if lang in _DELETE_RES and _DELETE_RES[lang].search(source) else []
-    if _EVAL_RE.search(source) and _FETCH_RE.search(source):
+    findings = [INLINE_DELETE_DESCRIPTION] if lang in _DELETE_RES and in_code(_DELETE_RES[lang]) else []
+    if in_code(_EVAL_RE) and in_code(_FETCH_RE):
         findings.append(INLINE_FETCH_EXEC_DESCRIPTION)
     return [shell for shell in shells if shell.strip()], findings
+
+
+def _code_mask(lang: str, source: str) -> list[bool]:
+    """Per character: True where it is code, False inside a string literal's content or a comment.
+    Quote characters themselves count as code, so a call whose argument is a string still matches
+    at its name. Comments: ``//`` and ``/* */`` for JS and PHP, ``#`` for Ruby, Perl and PHP."""
+    mask = [True] * len(source)
+    line_comment = ("//",) if lang == "js" else ("//", "#") if lang == "php" else ("#",) if lang in ("ruby", "perl") else ()
+    index, quote = 0, None
+    while index < len(source):
+        char = source[index]
+        if quote:
+            if char == "\\":
+                mask[index:index + 2] = [False] * len(mask[index:index + 2])
+                index += 2
+                continue
+            if char == quote:
+                quote = None
+            else:
+                mask[index] = False
+        elif char in "'\"" or (char == "`" and lang == "js"):
+            quote = char
+        elif lang in ("js", "php") and source.startswith("/*", index):
+            end = source.find("*/", index + 2)
+            end = len(source) if end < 0 else end + 2
+            mask[index:end] = [False] * (end - index)
+            index = end
+            continue
+        elif any(source.startswith(marker, index) for marker in line_comment) and (
+                char != "#" or index == 0 or source[index - 1] in " \t\n;"):
+            end = source.find("\n", index)
+            end = len(source) if end < 0 else end
+            mask[index:end] = [False] * (end - index)
+            index = end
+            continue
+        index += 1
+    return mask
 
 
 def _call_strings(source: str, pos: int) -> str:
@@ -206,6 +346,7 @@ def _call_strings(source: str, pos: int) -> str:
     for a paren-less Ruby/Perl call): one literal is the command, several an argv joined as the shell
     would quote it (``spawnSync('sh', ['-c', 'rm -rf x'])`` reads ``sh -c 'rm -rf x'``)."""
     strings, buf, quote, depth = [], [], None, 0
+    stack: list[str] = []  # open brackets; a string inside an object literal / hash is an option value
     index, end = pos, min(len(source), pos + 4_000)
     while index < end:
         char = source[index]
@@ -214,7 +355,8 @@ def _call_strings(source: str, pos: int) -> str:
                 buf.append(source[index + 1])
                 index += 1
             elif char == quote:
-                strings.append("".join(buf))
+                if "{" not in stack:
+                    strings.append("".join(buf))
                 buf, quote = [], None
             else:
                 buf.append(char)
@@ -222,8 +364,11 @@ def _call_strings(source: str, pos: int) -> str:
             quote = char
         elif char in "([{":
             depth += 1
+            stack.append(char)
         elif char in ")]}" or (depth == 0 and char in ";\n"):
             depth -= 1
+            if stack:
+                stack.pop()
             if depth <= 0:
                 break
         index += 1
