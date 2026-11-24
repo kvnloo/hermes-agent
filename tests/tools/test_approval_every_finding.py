@@ -104,3 +104,36 @@ def test_a_command_with_one_finding_still_passes_on_its_key(monkeypatch):
     cb = MagicMock(return_value="deny")
     assert check_all_command_guards("python3 -c 'print(1)'", "local", approval_callback=cb)["approved"] is True
     cb.assert_not_called()
+
+
+def test_a_grant_landing_mid_check_does_not_cover_the_other_pending_key(monkeypatch):
+    # Another approval grants the first key between the guard's scope snapshot and the gate's
+    # cache recheck: the gate must still ask about the key nobody granted.
+    monkeypatch.setenv("HERMES_INTERACTIVE", "1")
+    original = approval_module._run_approval_gate
+
+    def grant_first_then_enter(**kwargs):
+        assert set(kwargs["pattern_keys"]) == {DOCKER_STOP, FORCE_PUSH}
+        approve_session("every-finding", DOCKER_STOP)
+        return original(**kwargs)
+
+    monkeypatch.setattr(approval_module, "_run_approval_gate", grant_first_then_enter)
+    cb = MagicMock(return_value="deny")
+    assert check_dangerous_command(DOCKER_THEN_PUSH, "local", approval_callback=cb)["approved"] is False
+    cb.assert_called_once()
+    assert FORCE_PUSH in cb.call_args[0][1]
+
+
+@pytest.mark.parametrize("guard", GUARDS)
+def test_interpreter_inside_quoted_substitution_is_not_malformed(guard, monkeypatch):
+    # `echo "n: $(python3 x.py)"` tokenized to the end of its segment hits the outer closing
+    # quote; that raised the malformed-payload key, which the every-finding scan then demanded a
+    # grant for even when the command's class key was allowlisted.
+    monkeypatch.setenv("HERMES_INTERACTIVE", "1")
+    approval_module.approve_permanent(SCRIPT_FLAG)
+    cb = MagicMock(return_value="deny")
+    command = "python3 -c 'print(1)' && echo \"n: $(python3 asks.py stats). done\""
+    assert guard(command, "local", approval_callback=cb)["approved"] is True
+    cb.assert_not_called()
+    assert detect_dangerous_command('echo "n: $(python3 asks.py stats)"')[0] is False
+    assert detect_dangerous_command('python3 -c "print(1')[0] is True  # real malformed quoting still fails closed

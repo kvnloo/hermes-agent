@@ -1236,7 +1236,9 @@ def _run_approval_gate(
     if _yolo_active() or approval_context._get_approval_mode() == "off":
         return _approved()
     session_key = get_current_session_key()
-    if is_approved(session_key, pattern_key):
+    # Every pending key: a grant for the first one that lands after the caller's snapshot
+    # must not wave through the others.
+    if all(is_approved(session_key, key) for key in (pattern_keys or [pattern_key])):
         return _approved()
 
     approval_callback, is_cli, is_gateway, is_ask = _presence(approval_callback)
