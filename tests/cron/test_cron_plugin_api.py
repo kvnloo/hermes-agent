@@ -504,3 +504,120 @@ def test_ctx_cron_delivery_platforms_in_process(home_channels):
     finally:
         exit_cron_execution(token)
     assert ctx.cron_delivery_platforms() is None
+
+
+def test_create_with_origin_uses_creating_chat_not_home_channel(monkeypatch, registered):
+    import json
+
+    from gateway.session_context import clear_session_vars, set_session_vars
+    from tools.cronjob_tools import cronjob
+
+    monkeypatch.setenv("TELEGRAM_HOME_CHANNEL", TELEGRAM_CHAT)
+    tokens = set_session_vars(
+        platform="discord", chat_id=DISCORD_CHAT, async_delivery=True,
+    )
+    try:
+        args = dict(prompt="check in", schedule="in 30m", deliver="origin")
+        result = json.loads(cronjob(action="create", name="via-tool", **args))
+        assert result["success"], result
+        plugin_job = ensure_named_job("via-plugin", **args)
+    finally:
+        clear_session_vars(tokens)
+
+    assert delivery_platforms(result["job_id"]) == ("discord",)
+    assert delivery_platforms(plugin_job["id"]) == ("discord",)
+
+
+@pytest.mark.parametrize(
+    ("platform", "async_delivery", "deliver", "expected"),
+    [
+        ("discord", True, None, ()),
+        ("api_server", False, "origin", ("telegram",)),
+    ],
+)
+def test_create_keeps_existing_delivery_defaults(
+    monkeypatch, registered, platform, async_delivery, deliver, expected,
+):
+    from gateway.session_context import clear_session_vars, set_session_vars
+
+    monkeypatch.setenv("TELEGRAM_HOME_CHANNEL", TELEGRAM_CHAT)
+    tokens = set_session_vars(platform=platform, chat_id=DISCORD_CHAT, async_delivery=async_delivery)
+    try:
+        job = ensure_named_job("follow-up", prompt="check in", schedule="in 30m", deliver=deliver)
+    finally:
+        clear_session_vars(tokens)
+
+    assert job["origin"] is None
+    assert delivery_platforms(job["id"]) == expected
+
+
+@pytest.fixture()
+def creating_chat():
+    from gateway.session_context import clear_session_vars, set_session_vars
+
+    tokens = set_session_vars(
+        platform="discord", chat_id=DISCORD_CHAT, thread_id="thread", async_delivery=True,
+    )
+    try:
+        yield
+    finally:
+        clear_session_vars(tokens)
+
+
+@pytest.mark.parametrize(
+    ("deliver", "expected", "captures"),
+    [
+        ("local", (), False),
+        ("telegram", ("telegram",), False),
+        ("telegram, origin", ("telegram", "discord"), True),
+    ],
+)
+def test_only_origin_token_captures_chat(home_channels, registered, creating_chat, deliver, expected, captures):
+    job = ensure_named_job("mixed", prompt="check in", schedule="in 30m", deliver=deliver)
+    assert delivery_platforms(job["id"]) == expected
+    if captures:
+        assert job["origin"]["chat_id"] == DISCORD_CHAT
+        assert job["origin"]["thread_id"] == "thread"
+    else:
+        assert job["origin"] is None
+
+
+@pytest.mark.parametrize("fork_label", ["", "plugin_fork:example"])
+def test_no_gateway_chat_keeps_fallback(home_channels, registered, fork_label):
+    from agent.turn_facade import bind_detached_fork_origin
+
+    with bind_detached_fork_origin(fork_label):
+        job = ensure_named_job("outside", prompt="check in", schedule="in 30m", deliver="origin")
+
+    assert job["origin"] is None
+    assert delivery_platforms(job["id"]) == ("telegram",)
+
+
+def test_ensure_again_preserves_first_chat(registered, creating_chat):
+    from gateway.session_context import clear_session_vars, set_session_vars
+
+    args = dict(prompt="check in", schedule="in 30m", deliver="origin")
+    original = ensure_named_job("shared", **args)
+    tokens = set_session_vars(platform="telegram", chat_id=TELEGRAM_CHAT, async_delivery=True)
+    try:
+        again = ensure_named_job("shared", **args)
+    finally:
+        clear_session_vars(tokens)
+
+    assert original["origin"]["chat_id"] == DISCORD_CHAT
+    assert again["id"] == original["id"]
+    assert again["origin"] == original["origin"] == jobs.get_job(original["id"])["origin"]
+
+
+def test_origin_respects_explicit_and_bound_profile(target, registered, creating_chat):
+    args = dict(prompt="check in", schedule="in 30m", deliver="origin")
+    explicit = ensure_named_job("explicit", **args, home=target)
+    assert explicit["origin"] is None
+    assert jobs.get_job(explicit["id"]) is None
+    assert delivery_platforms(explicit["id"], home=target) == ("discord",)
+
+    with jobs.use_cron_store(target):
+        implicit = ensure_named_job("implicit", **args)
+        assert implicit["origin"]["thread_id"] == "thread"
+        assert jobs.get_job(implicit["id"])["origin"] == implicit["origin"]
+    assert jobs.get_job(implicit["id"]) is None
