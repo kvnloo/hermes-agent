@@ -768,6 +768,8 @@ def _set_status_direct(conn: sqlite3.Connection, task_id: str, new_status: str) 
             (effective_status,) * 4 + (task_id,))
         if cur.rowcount != 1:
             return False
+        if effective_status in {"ready", "review"}:
+            kanban_db._clear_requeued_failure_error(conn, task_id)
         run_id = None
         if was_running and effective_status != "running" and prev["current_run_id"]:
             run_id = kanban_db._end_run(

@@ -2087,6 +2087,7 @@ def recompute_ready(conn: sqlite3.Connection, failure_limit: int | None = None) 
                         "UPDATE tasks SET status = ? WHERE id = ? AND status = 'todo'",
                         (resume_status, task_id),
                     )
+                _clear_requeued_failure_error(conn, task_id)
                 _append_event(
                     conn, task_id, "promoted",
                     {"status": resume_status} if resume_status != "ready" else None,
@@ -2096,6 +2097,20 @@ def recompute_ready(conn: sqlite3.Connection, failure_limit: int | None = None) 
 
 
 # --- Claim / complete / block ---
+
+def _clear_requeued_failure_error(conn: sqlite3.Connection, task_id: str) -> None:
+    """Drop the stamped ``last_failure_error`` when a card is requeued for work.
+
+    ``check_respawn_guard`` parks a card as ``blocker_auth`` while that text
+    matches the auth/quota pattern, so every transition that sends a card back
+    to ``ready``/``review`` (promote, dashboard drag, dependency auto-promotion,
+    review reopen; ``unblock_task`` already resets it) must clear it, or the
+    card is parked forever with nothing spawning (#121281). Only the stamp goes:
+    ``consecutive_failures`` is kept, so a still-broken credential fails the
+    fresh attempt and counts toward the breaker. Call inside the caller's txn.
+    """
+    conn.execute("UPDATE tasks SET last_failure_error = NULL WHERE id = ?", (task_id,))
+
 
 def _parents_satisfied(conn: sqlite3.Connection, task_id: str) -> bool:
     """Return whether every direct parent is terminal for dependency gating."""
@@ -3519,6 +3534,7 @@ def promote_task(
         )
         if upd.rowcount != 1:
             return False, f"task {task_id} status changed during promotion"
+        _clear_requeued_failure_error(conn, task_id)
         _append_event(conn, task_id, "promoted_manual", {"actor": actor, "reason": reason})
 
     return True, None
@@ -3625,6 +3641,9 @@ def reopen_review_task(conn: sqlite3.Connection, task_id: str) -> bool:
         )
         if cur.rowcount != 1:
             return False
+        # The stamp goes even though the counter stays: a reopened card that is
+        # still parked as blocker_auth never reaches the breaker (#121281).
+        _clear_requeued_failure_error(conn, task_id)
         payload: dict[str, Any] = {"status": new_status}
         if implementer:
             payload["implementer"] = implementer
