@@ -143,7 +143,7 @@ def install_defaults(home: Path, *, say: Callable[[str], None] = logger.info,
                      entries: Optional[list] = None) -> dict:
     """Install and enable every default plugin *home* never had. ``installed`` lists what this call
     installed, ``owed`` what is still to fetch (a failed install). One plugin's failure never raises."""
-    from hermes_cli.left_core_migration import _first_cause, _install_into
+    from hermes_cli.left_core_migration import _first_cause, _install_into, _plugins_listed, legacy_plugin_keys
     from hermes_cli.memory_provider_migration import _home_label, _note_failure, _note_success
     result: dict = {"installed": [], "owed": []}
     policy = fetch_policy(home)
@@ -157,6 +157,9 @@ def install_defaults(home: Path, *, say: Callable[[str], None] = logger.info,
     install = _install_into(home, consent=True)  # a reviewed default: its dependencies come with it
     for entry in pending:
         if entry.name in have:
+            continue
+        # Honor opt-outs before installing, but still record an already-settled tree above.
+        if _plugins_listed(home, (entry.name, *legacy_plugin_keys(entry.name)))[1]:
             continue
         try:
             # A tree still on disk here is one an earlier automatic attempt left and nobody chose since
