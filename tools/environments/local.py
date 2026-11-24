@@ -987,6 +987,72 @@ def _append_dropped_path_entries(cmd_string: str, parent_path: str) -> str:
     return restore + "\n" + cmd_string
 
 
+# --- Opt-in foreground memory cap (#56865) ---
+_MIN_FOREGROUND_MEMORY_CAP_MB = 64  # same floor as the background worker scope (process_registry)
+_MEMORY_GUARD_INTERVAL_S = 0.5
+
+
+def _foreground_memory_cap_mb() -> int | None:
+    """``TERMINAL_LOCAL_MEMORY_MAX_MB`` as a per-command cap, or None (unset, invalid, below the floor)."""
+    raw = os.getenv("TERMINAL_LOCAL_MEMORY_MAX_MB", "").strip()
+    try:
+        mb = int(raw)
+    except ValueError:
+        return None
+    return mb if mb >= _MIN_FOREGROUND_MEMORY_CAP_MB else None
+
+
+class _ForegroundMemoryGuard:
+    """Samples the resident memory of a foreground command's whole tree and kills the tree past
+    the cap. Works without cgroups (macOS, containers without a user bus). The tree is walked from
+    the shell, so a descendant that left the shell's process group (``timeout`` does ``setpgid``)
+    is still counted, and ``_kill_process_group_posix`` sweeps it by PID."""
+
+    def __init__(self, env, proc, cap_mb: int):
+        self._env, self._proc, self.cap_mb = env, proc, cap_mb
+        self._stop = threading.Event()
+        self.tripped: tuple[float, str] | None = None  # (total MiB, largest process) once killed
+        self._thread = threading.Thread(target=self._run, name="hermes-memory-guard", daemon=True)
+        self._thread.start()
+
+    def _sample(self) -> tuple[float, str]:
+        import psutil
+        root = psutil.Process(self._proc.pid)
+        total, top = 0, (0, "")
+        for p in (root, *root.children(recursive=True)):
+            with contextlib.suppress(psutil.Error):
+                rss = p.memory_info().rss
+                total += rss
+                if rss > top[0]:
+                    top = (rss, f"{p.name()} pid {p.pid}")
+        return total / 2**20, top[1]
+
+    def _run(self) -> None:
+        while not self._stop.wait(_MEMORY_GUARD_INTERVAL_S):
+            try:
+                total_mb, top = self._sample()
+            except Exception:  # shell gone, psutil missing: nothing left to guard
+                return
+            if total_mb > self.cap_mb:
+                self.tripped = (total_mb, top)
+                logger.warning("Killing foreground command: %.0f MiB resident (largest: %s) is over "
+                               "TERMINAL_LOCAL_MEMORY_MAX_MB=%d", total_mb, top, self.cap_mb)
+                self._env._kill_process(self._proc)
+                return
+
+    def stop(self) -> None:
+        self._stop.set()
+        self._thread.join(timeout=5)
+
+    def annotate(self, result: dict) -> dict:
+        if self.tripped is None:
+            return result
+        total_mb, top = self.tripped
+        note = (f"\n[Command killed: its processes used {total_mb:.0f} MiB resident (largest: {top}), "
+                f"over TERMINAL_LOCAL_MEMORY_MAX_MB={self.cap_mb}]")
+        return {**result, "output": (result.get("output") or "") + note, "hermes_memory_capped": True}
+
+
 # --- Process-group teardown (POSIX) ---
 def _wait_for_group_exit(proc, pgid: int, timeout: float) -> bool:
     """Wait until the process group is gone, reaping the wrapper as we go (a dead
@@ -1322,15 +1388,22 @@ class LocalEnvironment(BaseEnvironment):
         command returned, what it left running in the background (`server &`) is not ours to kill,
         exactly as on a graceful exit. A command that yielded to background took the group with it
         (``ProcessRegistry.adopt_local`` clears ``_hermes_owned_pgid``). The secret hand-off reader
-        is joined first, so the next command sees what this one exported."""
+        is joined first, so the next command sees what this one exported.
+        With ``TERMINAL_LOCAL_MEMORY_MAX_MB`` set, the command's tree is killed once it holds more
+        resident memory than that (#56865); the result says so and carries ``hermes_memory_capped``."""
+        cap_mb = _foreground_memory_cap_mb()
+        guard = _ForegroundMemoryGuard(self, proc, cap_mb) if cap_mb is not None else None
         try:
-            return super()._wait_for_process(proc, *args, **kwargs)
+            result = super()._wait_for_process(proc, *args, **kwargs)
         finally:
+            if guard is not None:  # stopped first: what the command left running is not ours to kill
+                guard.stop()
             if (reader := getattr(proc, "_hermes_secret_reader", None)) is not None:
                 reader.join(timeout=2)
             if (owned_pgid := getattr(proc, "_hermes_owned_pgid", None)) is not None:
                 proc._hermes_owned_pgid = None
                 release_process_groups([owned_pgid])
+        return guard.annotate(result) if guard is not None else result
 
     def _spawn_long_lived(self, argv: list[str], child_env: dict | None) -> subprocess.Popen:
         """A long-lived process on this host: the same run environment as a command, owned so it and
