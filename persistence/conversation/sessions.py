@@ -1124,6 +1124,20 @@ class SessionRepository(Protocol):
         """The title's provenance; ``None`` when untitled."""
         ...
 
+    def append_decision_ledger_entry(self, session_id: SessionId, kind: str, text: str, *, turn_id: str = "") -> None:
+        """Append one explicit user decision (``approval``, ``denial``, ``correction`` or ``preference``) verbatim.
+        The caller bounds and redacts ``text``; the store keeps the newest window of the session, retaining denials,
+        corrections and approvals ahead of preferences. Empty text writes nothing; another kind raises ``ValueError``."""
+        ...
+
+    def get_decision_ledger_entries(self, session_id: SessionId) -> list[dict[str, str]]:
+        """The session's decision ledger, oldest first, as ``{"turn_id", "kind", "text"}`` dicts."""
+        ...
+
+    def copy_decision_ledger_entries(self, parent_session_id: SessionId, child_session_id: SessionId) -> None:
+        """Copy the parent's ledger to a compression child without reinterpreting it; a retry adds no duplicate."""
+        ...
+
     def get_by_title(self, title: str) -> Optional[SessionRecord]:
         """The row with exactly this title. An archived row titled :data:`CANONICAL_BOT_CHAT_TITLE` reads as absent when its archive is deliberate: not ``auto_archived`` and its compression tip's ``end_reason`` not recoverable (:data:`RECOVERABLE_END_REASONS`)."""
         ...

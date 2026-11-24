@@ -30,7 +30,7 @@ from .._holder import StoreHolder
 from .._schema import TITLE_SOURCE_USER
 from .._schema_ddl import _RESET_CHILD_SQL, _sql_json_extract
 from .._state.common import _shape_preview
-from ._store import stored_reads
+from ._store import decision_ledger, stored_reads
 from ._store.compression import _compression_tip_on, reopen_if_explicitly_closed
 from ._store.core import is_kanban_owned_session, retag_kanban_worker_sessions
 from ._store.gateway import list_gateway_sessions
@@ -718,6 +718,21 @@ class SQLiteSessionRepository:
         holder = self._store.holder()
         with refusals(holder, session_id):
             return _TITLE_SOURCES.get(get_session_title_source(holder, session_id))
+
+    def append_decision_ledger_entry(self, session_id: SessionId, kind: str, text: str, *, turn_id: str = "") -> None:
+        holder = self._store.holder()
+        with refusals(holder, session_id):
+            decision_ledger.append_decision_ledger_entry(holder, session_id, kind, text, turn_id=turn_id)
+
+    def get_decision_ledger_entries(self, session_id: SessionId) -> list[dict[str, str]]:
+        holder = self._store.holder()
+        with refusals(holder, session_id):
+            return decision_ledger.get_decision_ledger_entries(holder, session_id)
+
+    def copy_decision_ledger_entries(self, parent_session_id: SessionId, child_session_id: SessionId) -> None:
+        holder = self._store.holder()
+        with refusals(holder, child_session_id):
+            decision_ledger.copy_decision_ledger_entries(holder, parent_session_id, child_session_id)
 
     def get_by_title(self, title: str) -> Optional[SessionRecord]:
         holder = self._store.holder()

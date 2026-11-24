@@ -520,16 +520,14 @@ def _persist_choice(session_key: str, choice: str, keys: list[str]) -> None:
 def _record_decision_ledger(*, session_key: str, kind: str, text: str) -> None:
     """Best-effort durable approval history; a ledger failure never changes consent semantics."""
     try:
-        from hermes_state_registry import acquire, release
+        from agent.decision_ledger import record_decision
+        from persistence_assembly import open_persistence, profile_scope
         from tools.approval_context import get_current_session_id
         session_id = get_current_session_id()
         if not session_id:
             return
-        db = acquire()
-        try:
-            db.append_decision_ledger_entry(session_id, kind, text)
-        finally:
-            release(db)
+        with open_persistence(profile_scope()) as store:
+            record_decision(store.sessions, session_id, kind, text)
     except Exception:
         logger.debug("Could not record decision ledger entry", exc_info=True)
 

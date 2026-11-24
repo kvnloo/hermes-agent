@@ -3,9 +3,9 @@
 import logging
 import re
 
-from hermes_state_ledger import (
+from agent.decision_ledger import (
     LEDGER_PRIORITY, MAX_LEDGER_ENTRIES,
-    bounded_decision_text, bounded_ledger_turn_id, omitted_decision,
+    bounded_decision_text, bounded_ledger_turn_id, ledger_repository, omitted_decision,
 )
 
 logger = logging.getLogger(__name__)
@@ -99,7 +99,7 @@ def _render_ledger(entries: list) -> str:
 def fold_decision_ledger(agent, compressed: list) -> None:
     """Replace stale evidence without removing a human request merged into it."""
     _strip_old_handoff(compressed)
-    reader = getattr(getattr(agent, "_session_db", None), "get_decision_ledger_entries", None)
+    reader = getattr(ledger_repository(agent), "get_decision_ledger_entries", None)
     session_id = getattr(agent, "session_id", "") or ""
     if not session_id or not callable(reader):
         return

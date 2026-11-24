@@ -7,8 +7,8 @@ import pytest
 from agent.context_compressor import COMPRESSION_CONTINUATION_USER_CONTENT, SUMMARY_PREFIX
 from agent.conversation_compression import _ensure_compressed_has_user_turn, _is_real_user_message
 from agent.conversation_compression_ledger import MAX_LEDGER_HANDOFF_BYTES, fold_decision_ledger
-from hermes_state import SessionDB
-from hermes_state_ledger import MAX_LEDGER_TEXT_BYTES
+from agent.decision_ledger import MAX_LEDGER_TEXT_BYTES
+from tests.fixtures.decision_ledger_store import LedgerStore
 
 
 def _agent(entries):
@@ -69,7 +69,7 @@ def test_handoff_budget_prioritizes_denial_and_correction_without_partial_approv
 
 @pytest.mark.parametrize("kind", ["denial", "correction", "approval", "preference"])
 def test_oversized_events_are_explicit_and_do_not_replay_partial_scope(tmp_path, kind):
-    db = SessionDB(tmp_path / "state.db")
+    db = LedgerStore(tmp_path)
     try:
         db.create_session("session", source="test")
         db.append_decision_ledger_entry("session", kind, "可以" * MAX_LEDGER_TEXT_BYTES + " but never run this command")
@@ -87,15 +87,15 @@ def test_oversized_events_are_explicit_and_do_not_replay_partial_scope(tmp_path,
 
 
 def test_sensitive_capture_and_legacy_child_copy_are_sanitized_and_idempotent(tmp_path):
-    db = SessionDB(tmp_path / "state.db")
+    db = LedgerStore(tmp_path)
     secret = "ghp_" + "x" * 30
     password = "ledger-only-password-123"
     try:
         db.create_session("parent", source="test")
         db.create_session("child", source="test", parent_session_id="parent")
         db.append_decision_ledger_entry("parent", "denial", f"Do not use token {secret}; https://user:{password}@example.com/?access_token={password}", turn_id=secret)
-        # Existing databases may predate the storage guard.
-        db._write_sql("INSERT INTO decision_ledger (session_id, kind, text, created_at) VALUES (?, ?, ?, ?)", ("parent", "correction", "password=" + password, 1.0))
+        # The table is new on the storage interface, so no row predates the writer's guard.
+        db.append_decision_ledger_entry("parent", "correction", "password=" + password)
         db.copy_decision_ledger_entries("parent", "child")
         db.copy_decision_ledger_entries("parent", "child")
         parent = db.get_decision_ledger_entries("parent")
@@ -112,7 +112,7 @@ def test_sensitive_capture_and_legacy_child_copy_are_sanitized_and_idempotent(tm
 
 
 def test_preference_flood_cannot_evict_denial_or_correction(tmp_path):
-    db = SessionDB(tmp_path / "state.db")
+    db = LedgerStore(tmp_path)
     try:
         db.create_session("session", source="test")
         db.append_decision_ledger_entry("session", "denial", "Do not delete production data.")
@@ -131,12 +131,12 @@ def test_preference_flood_cannot_evict_denial_or_correction(tmp_path):
 @pytest.mark.parametrize("in_place", [True, False])
 def test_compaction_call_path_restores_latest_request_with_ledger(tmp_path, in_place):
     from tests.agent.test_compression_rotation_state import _build_agent_with_db, _conforming_fold, _seed_bulk_head
-    db = SessionDB(tmp_path / "state.db")
+    db = LedgerStore(tmp_path)
     try:
         db.create_session("session", source="test")
-        _seed_bulk_head(db, "session")
+        _seed_bulk_head(db.store, "session")
         db.append_decision_ledger_entry("session", "denial", "Do not delete production data.")
-        agent = _build_agent_with_db(db, "session")
+        agent = _build_agent_with_db(db.store, "session")
         agent.compression_in_place = in_place
         agent.context_compressor.compress.return_value = _conforming_fold()
         original = db.get_messages("session")
@@ -153,7 +153,7 @@ def test_compaction_call_path_restores_latest_request_with_ledger(tmp_path, in_p
 
 
 def test_copy_retry_with_nonempty_child_does_not_cycle_evicted_entries(tmp_path):
-    db = SessionDB(tmp_path / "state.db")
+    db = LedgerStore(tmp_path)
     try:
         db.create_session("parent", source="test")
         db.create_session("child", source="test", parent_session_id="parent")
@@ -173,7 +173,7 @@ def test_copy_retry_with_nonempty_child_does_not_cycle_evicted_entries(tmp_path)
 
 def test_redaction_failure_never_persists_raw_text(tmp_path, monkeypatch):
     import agent.redact
-    db = SessionDB(tmp_path / "state.db")
+    db = LedgerStore(tmp_path)
     try:
         db.create_session("session", source="test")
         def fail(*args, **kwargs):
@@ -190,7 +190,7 @@ def test_redaction_failure_never_persists_raw_text(tmp_path, monkeypatch):
 
 @pytest.mark.parametrize("merge_request", [True, False])
 def test_durable_handoff_reload_does_not_duplicate_ledger_or_count_as_request(tmp_path, merge_request):
-    db = SessionDB(tmp_path / "state.db")
+    db = LedgerStore(tmp_path)
     try:
         db.create_session("session", source="test")
         db.append_decision_ledger_entry("session", "denial", "Do not delete data.")
@@ -213,7 +213,7 @@ def test_durable_handoff_reload_does_not_duplicate_ledger_or_count_as_request(tm
 
 def test_sequence_repair_preserves_ledger_identity_and_new_user_request(tmp_path):
     from agent.agent_runtime_helpers import repair_message_sequence
-    db = SessionDB(tmp_path / "state.db")
+    db = LedgerStore(tmp_path)
     try:
         db.create_session("session", source="test")
         db.append_decision_ledger_entry("session", "denial", "Do not delete data.")

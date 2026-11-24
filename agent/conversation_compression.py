@@ -3128,7 +3128,8 @@ def _carry_session_state_to_child(agent: Any, old_session_id: str, old_title: An
         from agent.anthropic_thinking_replay import carry_rejected_thinking_to_session
         carry_rejected_thinking_to_session(agent, old_session_id)
     with _swallow('Could not migrate decision ledger on compression: %s'):
-        agent._session_db.copy_decision_ledger_entries(old_session_id, agent.session_id)
+        from agent.decision_ledger import ledger_repository
+        ledger_repository(agent).copy_decision_ledger_entries(old_session_id, agent.session_id)
     if not old_title:
         return
     from agent.agent_init_session import agent_interface

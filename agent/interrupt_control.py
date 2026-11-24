@@ -139,12 +139,11 @@ def _ic_abort_active_request(agent, reason: str, failure_log: str) -> None:
 
 
 def _record_user_decision(agent, kind: str, text: str) -> None:
-    db, session_id = getattr(agent, "_session_db", None), getattr(agent, "session_id", "") or ""
-    recorder = getattr(db, "append_decision_ledger_entry", None)
-    if not session_id or not callable(recorder):
-        return
+    from agent.decision_ledger import ledger_repository, record_decision
+    session_id = getattr(agent, "session_id", "") or ""
     try:
-        recorder(session_id, kind, text, turn_id=getattr(agent, "_current_turn_id", "") or "")
+        record_decision(ledger_repository(agent), session_id, kind, text,
+                        turn_id=getattr(agent, "_current_turn_id", "") or "")
     except Exception:
         logger.debug("Could not record user decision ledger entry", exc_info=True)
 

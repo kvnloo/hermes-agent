@@ -227,6 +227,15 @@ CREATE TABLE IF NOT EXISTS messages (
     tool_call_uid TEXT
 );
 
+CREATE TABLE IF NOT EXISTS decision_ledger (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+    turn_id TEXT NOT NULL DEFAULT '',
+    kind TEXT NOT NULL CHECK(kind IN ('approval', 'denial', 'correction', 'preference')),
+    text TEXT NOT NULL,
+    created_at REAL NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS session_model_usage (
     session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
     model TEXT NOT NULL,
@@ -445,6 +454,7 @@ CREATE INDEX IF NOT EXISTS idx_messages_assistant_calls_by_session
 CREATE INDEX IF NOT EXISTS idx_compression_locks_expires ON compression_locks(expires_at);
 CREATE INDEX IF NOT EXISTS idx_session_turn_leases_expires ON session_turn_leases(expires_at);
 CREATE INDEX IF NOT EXISTS idx_session_model_usage_session ON session_model_usage(session_id);
+CREATE INDEX IF NOT EXISTS idx_decision_ledger_session_id ON decision_ledger(session_id, id);
 CREATE INDEX IF NOT EXISTS idx_session_model_usage_model ON session_model_usage(model);
 CREATE INDEX IF NOT EXISTS idx_async_delegations_delivery
     ON async_delegations(delivery_state, completed_at);
