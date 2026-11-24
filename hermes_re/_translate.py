@@ -59,8 +59,8 @@ def _may_fold(pattern: str, flags: int) -> bool:
 
 def _same(pattern: str, flags: int) -> bool:
     """Whether ``pattern`` reads the same in both dialects, so nothing needs translating.
-    ("[:" : RE2 would read [[:alpha:]] as a POSIX class; "{," : RE2 reads {,n} as a literal.)"""
-    if "\\" in pattern or "$" in pattern or "[:" in pattern or "{," in pattern:
+    RE2 reads POSIX classes and repeat counts differently from stdlib."""
+    if "\\" in pattern or "$" in pattern or "[:" in pattern or "{" in pattern:
         return False
     if not pattern.isascii() and _has_surrogate(pattern):
         return False  # a lone surrogate in a bracket class has to be written as an escape
@@ -140,8 +140,12 @@ def translate(pattern: str, flags: int, latin1: bool = False, dollar=None) -> st
             text, i = _class(pattern, i, icase, ascii_only, latin1)
         elif ch == "(":
             text, i = _open(pattern, i, scopes)
-        elif ch == "{" and pattern.startswith(",", i + 1) and _repeat_end(pattern, i):
-            text, i = "{0", i + 1  # stdlib: {,n} is {0,n}; RE2 would read it as literal text
+        elif ch == "{" and (end := _repeat_end(pattern, i)):
+            # RE2 treats zero-padded counts and omitted lower bounds as literal text.
+            lo, comma, hi = pattern[i + 1:end - 1].partition(",")
+            lo = lo.lstrip("0") or "0"
+            hi = (hi.lstrip("0") or "0") if hi else ""
+            text, i = "{" + lo + comma + hi + "}", end
         elif ch == "$" and not multiline:
             if dollar is None:
                 raise NonTailDollar(i)
