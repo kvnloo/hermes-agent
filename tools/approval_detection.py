@@ -1924,3 +1924,23 @@ def detect_content_rule_keys(command: str) -> list[str]:
         # Safe only because the hardline scan walks every variant under an equal budget, so it ran
         # out too, and the gates then require a one-shot approval for the whole command (pinned).
         return []
+
+
+def detect_dangerous_keys(command: str) -> list[str]:
+    """Every distinct pattern key the command matches, in detection order; the first is
+    :func:`detect_dangerous_command`'s. The gates require a grant for each, so a remembered class key
+    for the first match (``python3 -c ... && rg --pre x``) cannot wave through a different later one.
+    A scan that runs out of budget part-way keeps what it found and adds the scan-incomplete key."""
+    keys: list[str] = []
+    try:
+        with _parser_budget.parser_budget(command):
+            for description in _iter_dangerous_descriptions(command):
+                if description not in keys:
+                    keys.append(description)
+    except _parser_budget.ParserBudgetExceeded:
+        keys.append(_SCAN_INCOMPLETE_DESCRIPTION)
+    except RecursionError:
+        keys.append(_PARSER_LIMIT_DESCRIPTION)
+    if not keys and hardline_scan_incomplete(command):
+        keys.append(_SCAN_INCOMPLETE_DESCRIPTION)
+    return list(dict.fromkeys(keys))
