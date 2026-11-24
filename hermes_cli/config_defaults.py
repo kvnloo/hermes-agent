@@ -1634,6 +1634,11 @@ DEFAULT_CONFIG = {
         # Case-insensitive fnmatch globs against terminal commands; a match blocks even under --yolo / mode=off.
         # Quote in YAML when starting with * or containing {}/!/: e.g. "git push --force*".
         "deny": [],
+        # A delete-only command (rm -r, rm /abs, git branch -D, with git worktree remove) runs without a prompt
+        # when every target resolves strictly inside one of these roots and nothing in it is unpushed. Paths
+        # (~ and $VAR allowed) or <scratch> (this profile's cache/scratch and an in-home $TMPDIR),
+        # <kanban-workspaces>, <build-outputs> (node_modules, dist, __pycache__, ... under a `cd` dir). [] off.
+        "safe_delete_roots": ["<scratch>", "<kanban-workspaces>", "<build-outputs>"],
         # Who may answer a chat approval/slash confirm/clarify: ["*"] any admitted member; [] requester + admins (+ ids).
         "approvers": ["*"],
         # /reload-mcp confirms before rebuilding the MCP tool set (it invalidates the prompt cache). "Always Approve" → false.

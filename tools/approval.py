@@ -39,7 +39,8 @@ from tools.approval_floors import (
     _user_deny_block_result,
 )
 from tools.approval_gateway_wait import _await_gateway_decision
-from tools.approval_provenance import allowlisted_result, preapproved_result
+from tools.approval_provenance import allowlisted_result, preapproved_result, safe_delete_result
+from tools.approval_safe_delete import safe_delete_clears
 from tools.approval_prompt import _present_with_selected_transport, _transport_choice, prompt_dangerous_approval
 from tools.approval_smart import _smart_verdict
 
@@ -836,6 +837,18 @@ def _allowlisted(command: str) -> dict:
     return allowlisted_result(rule, "; ".join(text for _, text in findings))
 
 
+def _safe_delete(command: str, env_type: str) -> dict | None:
+    """Approved result when every finding an earlier grant does not cover is a delete of the agent's own scratch
+    (``approvals.safe_delete_roots``), else None. Callers run it after the floors (hardline, ``approvals.deny``)
+    and never on an unread command."""
+    findings = _command_findings(command)
+    session_key = get_current_session_key()
+    scopes = {key: _approval_scope(session_key, key) for key, _ in findings}
+    if not safe_delete_clears(command, [f for f in findings if scopes[f[0]] is None], env_type):
+        return None
+    return safe_delete_result(findings, scopes.__getitem__)
+
+
 def _unattended_deny(command: str, ctx: _Unattended) -> dict | None:
     """Deny-mode handling for one unattended context (cron / -q / webhook); None = allow."""
     if ctx.mode() != "deny":
@@ -1358,6 +1371,8 @@ def check_dangerous_command(command: str, env_type: str,
             return _scan_incomplete_block(_NO_REVIEWER_PRESENT)
     elif _command_matches_permanent_allowlist(command):
         return _allowlisted(command)
+    if not unread and (cleared := _safe_delete(command, env_type)) is not None:
+        return cleared
     session_key = get_current_session_key()
     findings = _command_findings(command)
     scopes = {key: _approval_scope(session_key, key) for key, _ in findings}
@@ -1430,6 +1445,9 @@ def check_all_command_guards(command: str, env_type: str,
         return _scan_incomplete_block(_NO_REVIEWER_BYPASS) if unread else _approved()
     if not unread and _command_matches_permanent_allowlist(command):
         return _allowlisted(command)
+    # Before the presence branch, so a kanban worker or subagent cleaning its own scratch is not parked.
+    if not unread and (cleared := _safe_delete(command, env_type)) is not None:
+        return cleared
 
     approval_callback, is_cli, is_gateway, is_ask = _presence(approval_callback)
     # Outside CLI/gateway/ask flows we never block on approvals: each

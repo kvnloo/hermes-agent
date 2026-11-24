@@ -3238,6 +3238,15 @@ approvals:
   denial_breaker_threshold: 3   # 0 disables the breaker
 ```
 
+### Safe delete roots
+
+`approvals.safe_delete_roots` (default `["<scratch>", "<kanban-workspaces>", "<build-outputs>"]`) lets a delete-only command (`rm -r`, `git branch -D`, with any `git worktree remove`) run without a prompt when every target is inside one of these roots and nothing in it is unpushed. Add your own paths (`~` and `$VAR` expand); `[]` turns it off. See [Safe Delete Roots](./security.md#safe-delete-roots) for the exact rules:
+
+```yaml
+approvals:
+  safe_delete_roots: ["<scratch>", "<kanban-workspaces>", "<build-outputs>", "~/workspace/wt"]
+```
+
 ### Deny rules
 
 `approvals.deny` is a list of glob patterns that block matching terminal commands unconditionally — even under `--yolo`, `/yolo`, or `mode: off`. It's the user-editable counterpart to the built-in hardline blocklist:

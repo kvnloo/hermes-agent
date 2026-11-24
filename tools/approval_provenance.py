@@ -27,9 +27,20 @@ def allowlisted_result(rule: str, description: str) -> dict:
     }
 
 
+def safe_delete_result(findings: list[tuple[str, str]], scope_of) -> dict:
+    """Approved guard result for *findings* that ``approvals.safe_delete_roots`` covers, except those
+    ``scope_of(key)`` labels as already granted ('permanent' or 'session')."""
+    return {
+        "approved": True,
+        "message": None,
+        "pre_approved": [{"description": text, "scope": scope_of(key) or "safe_delete"} for key, text in findings],
+    }
+
+
 _SCOPE_PHRASES = {
     "allowlist": "the command_allowlist entry `{rule}` in config.yaml",
     "permanent": "an 'always' approval the user saved earlier",
+    "safe_delete": "approvals.safe_delete_roots (every target is inside a safe root and nothing in it is unpushed)",
     # Both a 'session' and an 'always' answer session-approve their keys, so a session-only grant may
     # be what is left of an 'always' answer whose command_allowlist entry the operator removed.
     "session": "an approval the user gave earlier in this session",

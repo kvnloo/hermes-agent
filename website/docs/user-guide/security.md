@@ -193,6 +193,37 @@ Like the rest of the approval config, changes take effect immediately (the confi
 Deny rules are a shell-command policy, not a complete shell interpreter or an OS capability sandbox. Normalization does not resolve arbitrary variables (including GNU `env -S` `${NAME}` expansion), aliases, functions, renamed binaries, scripts, interpreter programs, or every shell/launcher grammar (for example, case-pattern syntax, clustered launcher options, or options embedded inside an `env -S` string). Do not use a basename deny rule as a guarantee that a capability cannot be reached by other means. For containment, use OS permissions and an isolated backend with appropriately restricted mounts, credentials, and network access. This matching behavior does not change the configured approval mode or the empty-deny-list default.
 :::
 
+### Safe Delete Roots (`approvals.safe_delete_roots`) {#safe-delete-roots}
+
+Agents clean up after themselves: a scratch clone, a finished worktree, a merged branch, `node_modules`. Those deletes are flagged like any other recursive delete, and in a kanban worker or subagent nobody answers the prompt. `approvals.safe_delete_roots` lets a delete-only command run without a prompt when everything it removes is the agent's own and nothing is lost:
+
+```yaml
+approvals:
+  safe_delete_roots:
+    - "<scratch>"            # this profile's cache/scratch, and $TMPDIR when it is inside HERMES_HOME
+    - "<kanban-workspaces>"  # kanban task workspaces (every board)
+    - "<build-outputs>"      # node_modules, dist, __pycache__, .pytest_cache, .mypy_cache, .ruff_cache
+    - "~/workspace/wt"       # your own paths; ~ and $VAR are expanded
+```
+
+The three `<...>` entries are the default. Set `safe_delete_roots: []` to turn the feature off.
+
+A command runs without a prompt only when all of these hold; otherwise it is prompted exactly as before:
+
+- Its only findings are `rm` deletes (`rm -r`, `rm /abs/path`) and `git branch -D`. Any other finding in the same command (a `python -c`, a force push, ...) keeps the whole prompt unless a `command_allowlist` entry, an "always" answer or an earlier approval in this session already covers it.
+- Every `rm` target, after `~` and `$VAR` expansion and `realpath`, is strictly inside a root, never the root itself. A target that is itself a git checkout (a scratch clone) must also have no uncommitted or untracked changes and no unpushed commit; checkouts nested deeper inside a target are not inspected. A symlink that points outside, `..` that climbs out, a glob outside the last path component, `~user`, or a variable that is unset or holds blanks or glob characters keeps the prompt. `<build-outputs>` names count only directly under a directory the same command `cd`-ed into (not `/` or your home).
+- Every `git worktree remove` path in the command is a worktree root inside a root with no uncommitted or untracked changes and no commit missing from a remote-tracking ref.
+- Every `git branch -D` branch exists and has no commit missing from a remote-tracking ref ("pushed" means as of the last fetch).
+- The command is a plain list (`&&`, `;`, `||`, `|`) of simple commands. Command substitution, subshells, braces, heredocs, redirections on a delete, assignments, shell keywords, unknown `rm`/`git` options, and `rm` run through another command (`sudo rm`, `xargs rm`, `ssh host 'rm -rf ...'`) keep the prompt.
+- Relative targets need a `cd /abs/path &&` earlier in the same command: the gate does not know the shell's working directory. A `cd` joined by `;` or `||` does not count, since the delete still runs if the `cd` fails.
+- The terminal backend is `local`. On SSH, Docker and other backends the paths name another filesystem.
+
+The hardline blocklist and `approvals.deny` are checked first, so a deny rule still blocks a delete inside a safe root. An auto-cleared command reports `auto-approved by approvals.safe_delete_roots` in its result.
+
+:::note Threat model
+This is the same accident-prevention heuristic as the rest of the approval gate, not a boundary. `$VAR` values are read from the agent process, not from the shell session (a variable exported by an earlier terminal call is not seen), and "pushed" relies on local remote-tracking refs. Only list roots whose contents the agent may lose.
+:::
+
 ### Approval Timeout
 
 When a dangerous command prompt appears, the user has a configurable amount of time to respond. If no response is given within the timeout, the command is **denied** by default (fail-closed).
