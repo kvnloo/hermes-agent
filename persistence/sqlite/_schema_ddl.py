@@ -231,7 +231,7 @@ CREATE TABLE IF NOT EXISTS decision_ledger (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
     turn_id TEXT NOT NULL DEFAULT '',
-    kind TEXT NOT NULL CHECK(kind IN ('approval', 'denial', 'correction', 'preference')),
+    kind TEXT NOT NULL CHECK(kind IN ('approval', 'denial', 'correction', 'preference', 'pin')),
     text TEXT NOT NULL,
     created_at REAL NOT NULL
 );

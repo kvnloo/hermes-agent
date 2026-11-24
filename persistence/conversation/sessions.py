@@ -1138,6 +1138,19 @@ class SessionRepository(Protocol):
         """Copy the parent's ledger to a compression child without reinterpreting it; a retry adds no duplicate."""
         ...
 
+    def add_pin(self, session_id: SessionId, text: str, *, limit: int) -> Optional[int]:
+        """Append one ``pin`` ledger entry verbatim and return its 1-based number; ``None``, writing nothing, when
+        the session already holds ``limit`` pins. Pins are never trimmed by the ledger window."""
+        ...
+
+    def remove_pin(self, session_id: SessionId, number: int) -> Optional[str]:
+        """Delete pin ``number`` (1-based, oldest first) and return its text; ``None`` when there is no such pin."""
+        ...
+
+    def patch_pin(self, session_id: SessionId, number: int, text: str) -> bool:
+        """Replace pin ``number``'s text, keeping its place; ``False`` when there is no such pin."""
+        ...
+
     def get_by_title(self, title: str) -> Optional[SessionRecord]:
         """The row with exactly this title. An archived row titled :data:`CANONICAL_BOT_CHAT_TITLE` reads as absent when its archive is deliberate: not ``auto_archived`` and its compression tip's ``end_reason`` not recoverable (:data:`RECOVERABLE_END_REASONS`)."""
         ...

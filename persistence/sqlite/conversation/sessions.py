@@ -734,6 +734,21 @@ class SQLiteSessionRepository:
         with refusals(holder, child_session_id):
             decision_ledger.copy_decision_ledger_entries(holder, parent_session_id, child_session_id)
 
+    def add_pin(self, session_id: SessionId, text: str, *, limit: int) -> Optional[int]:
+        holder = self._store.holder()
+        with refusals(holder, session_id):
+            return decision_ledger.add_pin(holder, session_id, text, limit=limit)
+
+    def remove_pin(self, session_id: SessionId, number: int) -> Optional[str]:
+        holder = self._store.holder()
+        with refusals(holder, session_id):
+            return decision_ledger.remove_pin(holder, session_id, number)
+
+    def patch_pin(self, session_id: SessionId, number: int, text: str) -> bool:
+        holder = self._store.holder()
+        with refusals(holder, session_id):
+            return decision_ledger.patch_pin(holder, session_id, number, text)
+
     def get_by_title(self, title: str) -> Optional[SessionRecord]:
         holder = self._store.holder()
         with refusals(holder):

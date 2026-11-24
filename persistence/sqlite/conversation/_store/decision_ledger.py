@@ -3,6 +3,9 @@
 Rows are evidence for the compaction handoff, never an executable approval gate. The caller bounds and redacts
 the text (agent.decision_ledger.record_decision); this module keeps the newest window per session, with
 denials, corrections and approvals retained ahead of preferences.
+
+``pin`` rows are the user's ``/pin`` entries (agent.pins). They are written only by the pin verbs, which take a
+cap and refuse an add past it; the window trim never touches them.
 """
 
 from __future__ import annotations
@@ -14,8 +17,8 @@ from persistence.sqlite._holder import StoreHolder
 MAX_LEDGER_ENTRIES = 50
 LEDGER_KINDS = ("approval", "denial", "correction", "preference")
 
-_TRIM_SQL = """DELETE FROM decision_ledger WHERE session_id = ? AND id NOT IN (
-    SELECT id FROM decision_ledger WHERE session_id = ?
+_TRIM_SQL = """DELETE FROM decision_ledger WHERE session_id = ? AND kind != 'pin' AND id NOT IN (
+    SELECT id FROM decision_ledger WHERE session_id = ? AND kind != 'pin'
     ORDER BY CASE kind WHEN 'denial' THEN 0 WHEN 'correction' THEN 1
         WHEN 'approval' THEN 2 ELSE 3 END, created_at DESC, turn_id DESC, text DESC, id DESC LIMIT ?)"""
 
@@ -72,3 +75,51 @@ def copy_decision_ledger_entries(holder: StoreHolder, parent_session_id: str, ch
         _trim(conn, child_session_id)
 
     holder._execute_write(_copy)
+
+
+def _pin_ids(conn, session_id: str) -> list[int]:
+    return [row["id"] for row in conn.execute(
+        "SELECT id FROM decision_ledger WHERE session_id = ? AND kind = 'pin' ORDER BY id ASC", (session_id,))]
+
+
+def add_pin(holder: StoreHolder, session_id: str, text: str, *, limit: int):
+    """Append one pin and return its 1-based number, or None (nothing written) when ``limit`` pins exist."""
+
+    def _add(conn):
+        count = len(_pin_ids(conn, session_id))
+        if count >= limit:
+            return None
+        conn.execute(
+            "INSERT INTO decision_ledger (session_id, turn_id, kind, text, created_at) VALUES (?, '', 'pin', ?, ?)",
+            (session_id, text, time.time()),
+        )
+        return count + 1
+
+    return holder._execute_write(_add)
+
+
+def remove_pin(holder: StoreHolder, session_id: str, number: int):
+    """Delete pin ``number`` (1-based) and return its text, or None when there is no such pin."""
+
+    def _remove(conn):
+        ids = _pin_ids(conn, session_id)
+        if not isinstance(number, int) or not 1 <= number <= len(ids):
+            return None
+        row = conn.execute("SELECT text FROM decision_ledger WHERE id = ?", (ids[number - 1],)).fetchone()
+        conn.execute("DELETE FROM decision_ledger WHERE id = ?", (ids[number - 1],))
+        return row["text"]
+
+    return holder._execute_write(_remove)
+
+
+def patch_pin(holder: StoreHolder, session_id: str, number: int, text: str) -> bool:
+    """Replace pin ``number``'s text in place (its number is kept); False when there is no such pin."""
+
+    def _patch(conn):
+        ids = _pin_ids(conn, session_id)
+        if not isinstance(number, int) or not 1 <= number <= len(ids):
+            return False
+        conn.execute("UPDATE decision_ledger SET text = ? WHERE id = ?", (text, ids[number - 1]))
+        return True
+
+    return bool(holder._execute_write(_patch))

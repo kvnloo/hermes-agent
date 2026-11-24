@@ -37,7 +37,7 @@ def _watch_reviewer(cli, _arg):
 _VERBATIM = frozenset({"toolsets"})
 GATEWAY_SETTINGS = {"personality": None, "busy": _mirror_busy, "approvals": None, "footer": None, "fast": None,
                     "refine": None, "review": _watch_reviewer, "cron": None,
-                    "toolsets": None}
+                    "toolsets": None, "pin": None, "pins": None, "unpin": None}
 
 
 def _unbounded(canonical, arg):

@@ -4136,6 +4136,8 @@ def compress_context(
         _fold_todo_snapshot(agent, compressed)
         from agent.conversation_compression_ledger import fold_decision_ledger
         fold_decision_ledger(agent, compressed)
+        from agent.pins import fold_pins_into_summary
+        fold_pins_into_summary(agent, compressed)
         compressed_user_turn_outcome = _ensure_compressed_has_user_turn(messages, compressed)
         new_system_prompt = _rebuild_system_prompt_at_boundary(agent, system_message)
         commit = _commit_compaction(

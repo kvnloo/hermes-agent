@@ -140,6 +140,16 @@ class CLILoopsMixin:
         _cprint(_fresh_start())
         self._print_random_tip()
 
+    # /pin /pins /unpin: pins live in the session's decision ledger, written by the gateway that runs the
+    # session's compaction (gateway/slash_commands_pins.py). gateway_setting_commands forwards them there;
+    # these run only when no gateway connection answered.
+    def _handle_pin_command(self, cmd_original: str):
+        from cli import _cprint
+        _cprint("  /pin, /pins and /unpin need the session's gateway, which keeps the pins; none is connected.")
+
+    _handle_pins_command = _handle_pin_command
+    _handle_unpin_command = _handle_pin_command
+
     def _cmd_title(self, cmd_original: str):
         from cli import _cprint
         from storage_user_copy import format_session_db_unavailable

@@ -104,7 +104,7 @@ def fold_decision_ledger(agent, compressed: list) -> None:
     if not session_id or not callable(reader):
         return
     try:
-        entries = reader(session_id)
+        entries = [entry for entry in reader(session_id) if entry.get("kind") != "pin"]
     except Exception:
         logger.debug("Could not load decision ledger for compaction", exc_info=True)
         return
@@ -120,3 +120,17 @@ def fold_decision_ledger(agent, compressed: list) -> None:
         tail["_decision_ledger_embedded"] = True
     else:
         compressed.append({"role": "user", "content": content, "_decision_ledger_synthetic": True, "display_metadata": {"decision_ledger": "synthetic"}})
+
+
+def append_to_ledger_carrier(compressed: list, text: str) -> None:
+    """Put ``text`` inside the handoff's ledger block (creating a carrier when there is none), so the next
+    fold strips it with the block instead of accumulating copies."""
+    for message in reversed(compressed):
+        content = message.get("content") if isinstance(message, dict) else None
+        if ledger_message_kind(message) and isinstance(content, str) and _DECISION_LEDGER_FOOTER in content:
+            from agent.conversation_compression import _replace_message_content
+            head, _, tail = content.rpartition(_DECISION_LEDGER_FOOTER)
+            _replace_message_content(message, f"{head.rstrip()}\n{text}\n{_DECISION_LEDGER_FOOTER}{tail}")
+            return
+    compressed.append({"role": "user", "content": f"{_DECISION_LEDGER_HEADER}\n{text}\n{_DECISION_LEDGER_FOOTER}",
+                       "_decision_ledger_synthetic": True, "display_metadata": {"decision_ledger": "synthetic"}})

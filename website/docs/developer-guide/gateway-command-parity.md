@@ -26,7 +26,7 @@ narrower routes (`hermes_cli/gateway_chat_commands.py`).
 setting to this local session (its next turn and `config.get`), saving config.yaml only where the
 handler does; `client-local (cli_only)` commands are terminal/UI features of a client.
 
-105 registry commands: 29 control, 19 read, 57 refused.
+108 registry commands: 32 control, 19 read, 57 refused.
 
 | Command | Gateway (`slash.exec`) | Classic CLI | Ink | Desktop | ACP | Notes |
 |---|---|---|---|---|---|---|
@@ -85,6 +85,8 @@ handler does; `client-local (cli_only)` commands are terminal/UI features of a c
 | `/pause` | refused | messaging-only: unknown command | slash.exec: refused | slash.exec: refused | slash.exec: refused | messaging-only |
 | `/personality` | control | HermesCLI._handle_personality_command | canonical route | slash.exec | slash.exec | per-session setting (gateway handler) |
 | `/pet` | refused | HermesCLI._handle_pet_command | slash.exec | action: pet | slash.exec: refused | client-local (cli_only) |
+| `/pin` | control | HermesCLI._handle_pin_command | slash.exec | slash.exec | slash.exec |  |
+| `/pins` | control | HermesCLI._handle_pins_command | slash.exec | slash.exec | slash.exec |  |
 | `/plan` | control | HermesCLI._handle_plan_command | slash.exec | slash.exec | slash.exec |  |
 | `/platform` | refused | messaging-only: unknown command | slash.exec: refused | slash.exec: refused | slash.exec: refused | messaging adapters; `pause`/`resume` mutate them |
 | `/platforms` (/gateway) | read | HermesCLI._show_gateway_status | slash.exec | unavailable: terminal | slash.exec | client-local (cli_only) |
@@ -126,6 +128,7 @@ handler does; `client-local (cli_only)` commands are terminal/UI features of a c
 | `/topic` | refused | messaging-only: unknown command | slash.exec: refused | slash.exec: refused | slash.exec: refused | messaging-only |
 | `/topup` | read | HermesCLI._show_billing | sidecar: billing.state | slash.exec | slash.exec |  |
 | `/undo` | refused | HermesCLI._cmd_undo | canonical route | action: undo | session.mutate rewind |  |
+| `/unpin` | control | HermesCLI._handle_unpin_command | slash.exec | slash.exec | slash.exec |  |
 | `/update` | refused | HermesCLI._cmd_update | local | unavailable: terminal | slash.exec: refused |  |
 | `/usage` | read (bare only (`reset` refused)) | HermesCLI._handle_usage_command | canonical route | slash.exec | slash.exec |  |
 | `/verbose` | control | HermesCLI._toggle_verbose | config.set | unavailable: terminal | slash.exec | per-session setting (gateway handler) |
