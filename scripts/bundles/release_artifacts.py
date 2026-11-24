@@ -620,6 +620,8 @@ class StableDownloads:
             expected_size=dmg_item["size"],
             expected_sha256=dmg_item["sha256"],
         )
+        if dmg_needs_copy:
+            r2.require_copy_size(dmg_item["size"])
         page_needs_write, page_conditions = _check_stable_page_state(
             R2ChannelStore(creds, base, bucket).get(r2.channel_page_key_for("stable")),
             tag=manifest["tag"],

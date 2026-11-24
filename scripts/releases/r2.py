@@ -779,6 +779,12 @@ def _verify_copied_destination(
             raise ValueError(f"Copied object metadata mismatch for {header_name}: {dest_key}")
 
 
+def require_copy_size(expected_size: int) -> None:
+    """Validate the size before a single-request CopyObject."""
+    if type(expected_size) is not int or expected_size <= 0 or expected_size > MAX_SINGLE_COPY_SIZE:
+        raise ValueError(f"CopyObject size must be between 1 and {MAX_SINGLE_COPY_SIZE} bytes")
+
+
 def copy_object(
     creds: dict[str, str],
     base: str,
@@ -796,8 +802,7 @@ def copy_object(
     """Server-side S3/R2 CopyObject with explicit metadata replacement and HEAD verification."""
     relative_artifact_path(source_key)
     relative_artifact_path(dest_key)
-    if type(expected_size) is not int or expected_size <= 0 or expected_size > MAX_SINGLE_COPY_SIZE:
-        raise ValueError(f"CopyObject size must be between 1 and {MAX_SINGLE_COPY_SIZE} bytes")
+    require_copy_size(expected_size)
     scope = R2Scope.configured()
     source_head = head_object(creds, base, bucket, source_key, now, fetcher=fetcher)
     if source_head is None:
