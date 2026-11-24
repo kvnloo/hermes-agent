@@ -257,3 +257,60 @@ def test_user_root_with_tilde_and_glob_in_last_component(config, tmp_path, monke
     config["safe_delete_roots"] = ["~/wt"]
     _assert_cleared(check_all_command_guards, "rm -rf ~/wt/a ~/wt/b*")
     _assert_prompted(check_all_command_guards, "rm -rf ~/wt")
+
+
+# --- Where the shell really is: AND-OR skips, quoted text, logical cd, whole-clone refs -----------------------------
+
+@pytest.fixture
+def safe_and_outside(tmp_path, config):
+    """Only ``safe`` is a root; both directories hold a ``victim``."""
+    safe, outside = tmp_path / "safe", tmp_path / "outside"
+    for base in (safe, outside):
+        (base / "victim").mkdir(parents=True)
+    config["safe_delete_roots"] = [str(safe)]
+    return safe, outside
+
+
+@pytest.mark.parametrize("guard", GUARDS)
+def test_cd_after_or_may_be_skipped_so_it_sets_no_directory(guard, safe_and_outside):
+    safe, outside = safe_and_outside
+    # `true` succeeds, so bash skips `cd safe` and the rm runs in outside.
+    _assert_prompted(guard, f"cd {outside} && true || cd {safe} && rm -rf victim")
+    _assert_prompted(guard, f"cd {outside} || cd {safe} && rm -rf victim")
+    _assert_cleared(guard, f"cd {safe} && rm -rf victim")  # control
+
+
+@pytest.mark.parametrize("guard", GUARDS)
+def test_quoted_separator_is_an_argument_not_a_new_command(guard, safe_and_outside):
+    safe, outside = safe_and_outside
+    _assert_prompted(guard, f"cd {outside} && printf '%s' '&&' cd {safe} && rm -rf victim")
+
+
+@pytest.mark.parametrize("guard", GUARDS)
+def test_single_quoted_dollar_is_literal_text(guard, safe_and_outside, monkeypatch):
+    safe, outside = safe_and_outside
+    monkeypatch.setenv("XR03_SAFE", str(safe))
+    (outside / "$XR03_SAFE" / "victim").mkdir(parents=True)
+    _assert_prompted(guard, f"cd {outside} && rm -rf '$XR03_SAFE/victim'")
+    _assert_cleared(guard, f'rm -rf "$XR03_SAFE/victim"')  # control: double quotes do expand
+
+
+@pytest.mark.parametrize("guard", GUARDS)
+def test_cd_dotdot_is_logical_like_bash(guard, safe_and_outside):
+    safe, outside = safe_and_outside
+    (safe / "nested").mkdir()
+    (outside / "link").symlink_to(safe / "nested", target_is_directory=True)
+    # bash's default `cd -L` drops `link/..` lexically: the rm runs in outside, not safe.
+    _assert_prompted(guard, f"cd {outside}/link/.. && rm -rf victim")
+    _assert_prompted(guard, f"cd {outside}/link && cd .. && rm -rf victim")
+    (safe / "nested" / "victim").mkdir()
+    _assert_cleared(guard, f"cd {outside}/link && rm -rf victim")  # control: the link itself lands in safe
+
+
+@pytest.mark.parametrize("guard", GUARDS)
+def test_rm_of_a_whole_clone_checks_every_local_branch(guard, repo):
+    # The fixture ends on pushed main with an unpushed `local-only` branch that rm -rf would destroy.
+    _assert_prompted(guard, f"rm -rf {repo}")
+    _git(repo, "branch", "-D", "local-only")
+    _assert_cleared(guard, f"rm -rf {repo}")  # control: nothing unpushed left
+

@@ -57,6 +57,7 @@ _RM_SHORT = frozenset("rRfvdiI")
 _RM_LONG = frozenset({"--recursive", "--force", "--verbose", "--dir"})
 _GLOB_CHARS = frozenset("*?[")
 _GIT_TIMEOUT = 5.0
+_LITERAL_DOLLAR = "\x00"  # a `$` inside single quotes: literal text, never expanded (see _expand)
 
 
 class _Unsafe(Exception):
@@ -90,7 +91,7 @@ def _expand(word: str) -> str:
             raise _Unsafe(f"${name} is unset or not a plain path")
         out.append(value)
         i = k + 1 if braced else k
-    return "".join(out)
+    return "".join(out).replace(_LITERAL_DOLLAR, "$")
 
 
 def _inside(path: str, root: str) -> bool:
@@ -152,29 +153,40 @@ def configured_roots(entries) -> tuple[list[str], bool]:
     return roots, build
 
 
-def _screen_syntax(command: str) -> None:
+def _screen_syntax(command: str) -> str:
     """Refuse shell syntax this check does not read. Single-quoted text is literal, so an awk program
-    (``awk '{print $4}'``) is fine; inside double quotes ``$(``, backticks and backslashes still refuse."""
-    plain, quoted, quote = [], [], ""
+    (``awk '{print $4}'``) is fine; inside double quotes ``$(``, backticks and backslashes still refuse.
+    Returns *command* with each single-quoted ``$`` marked, because shlex drops the quotes that made it
+    literal. A quoted string made only of operator characters (``printf '&&'``) refuses: shlex would
+    hand it back as a bare ``&&`` indistinguishable from the separator."""
+    plain, quoted, quote, region, marked = [], [], "", [], []
     for ch in command:
         if quote:
             if ch == quote:
-                quote = ""
-            elif quote == '"':
-                quoted.append(ch)
+                if region and set(region) <= set(";&|()<>"):
+                    raise _Unsafe("quoted shell operator")
+                quote, region = "", []
+            else:
+                region.append(ch)
+                if quote == '"':
+                    quoted.append(ch)
+                elif ch == "$":
+                    ch = _LITERAL_DOLLAR
         elif ch in "'\"":
             quote = ch
             plain.append(" ")
         else:
             plain.append(ch)
+        marked.append(ch)
     plain_text, quoted_text = "".join(plain), "".join(quoted)
     if any(t in plain_text for t in _REFUSED_TEXT) or any(t in quoted_text for t in ("$(", "`", "\\")):
         raise _Unsafe("shell syntax this check does not read")
+    return "".join(marked)
 
 
 def _segments(command: str) -> list[tuple[str, list[str]]]:
     """``[(separator before it, argv)]``; refuses anything beyond plain ``a && b; c | d`` lists."""
-    _screen_syntax(command)
+    command = _screen_syntax(command)
     lexer = shlex.shlex(command, posix=True, punctuation_chars=";&|()<>")
     lexer.whitespace_split = True
     lexer.commenters = ""
@@ -312,29 +324,38 @@ def _check_worktree_remove(repo: str | None, args: list[str], roots: list[str]) 
 
 
 def _check_checkout(path: str) -> None:
-    """A checkout about to be deleted holds no uncommitted or untracked change and no unpushed commit."""
+    """A checkout about to be deleted holds no uncommitted or untracked change and no unpushed commit.
+    Deleting a whole clone (``.git`` is a directory) also deletes every local branch, tag and stash, so
+    each must be on a remote; a linked worktree only takes its HEAD with it."""
     if _git(path, "status", "--porcelain", "--untracked-files=all").strip():
         raise _Unsafe("checkout has uncommitted changes")
     if _unpushed(path, "HEAD"):
         raise _Unsafe("checkout has commits on no remote")
+    if os.path.isdir(os.path.join(path, ".git")) and _unpushed(path, "--all"):
+        raise _Unsafe("clone has refs with commits on no remote")
 
 
 def _check(command: str, roots: list[str], build_outputs: bool) -> None:
     deletes = 0
     cwd: str | None = None
+    logical: str | None = None  # the shell's $PWD: bash's default `cd -L` drops `x/..` before following links
     for sep, argv in _segments(command):
         if sep != "&&":
-            cwd = None  # after `;`, `||` or `|` a failed cd would leave the old directory
+            cwd = logical = None  # after `;`, `||` or `|` a failed cd would leave the old directory
         name = os.path.basename(argv[0])
         redirected = any(set(a) <= set("&|<>") for a in argv)
         if name == "cd":
             if len(argv) != 2 or redirected:
                 raise _Unsafe("cd form")
-            target = _expand(argv[1])
-            if os.path.isabs(target):
-                cwd = os.path.realpath(target)
-            elif cwd is not None:
-                cwd = os.path.realpath(os.path.join(cwd, target))
+            if sep in ("||", "|"):
+                # `a && true || cd safe && rm x`: the cd is skipped when the left side succeeds, and the
+                # rm still runs; a piped cd runs in a subshell. Neither tells where the rm runs.
+                continue
+            target = _resolve(argv[1], None) if os.path.isabs(_expand(argv[1])) else (
+                os.path.join(logical, _expand(argv[1])) if logical is not None else None)
+            if target is not None:
+                logical = os.path.normpath(target)
+                cwd = os.path.realpath(logical)
             continue
         if name in ("rm", "rm.exe"):
             if redirected:
