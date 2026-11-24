@@ -80,6 +80,9 @@ def ensure_named_job(
     registration that fails, for a new job or an existing one, raises that command's
     ``CronSchedulerRegistrationError`` (a ``RuntimeError`` with the saved job as ``.job``).
 
+    With no explicit ``home``, requesting ``origin`` uses the creating turn's destination
+    under the same rules as ``cronjob``.
+
     ``name`` must be a non-empty ``str`` with no leading or trailing whitespace, since cron could
     not find any other name again; anything else raises ``ValueError`` before anything is written.
 
@@ -112,9 +115,17 @@ def ensure_named_job(
                 except Exception as exc:
                     raise CronSchedulerRegistrationError(job, exc) from exc
             return job
+        origin = None
+        if home is None and isinstance(deliver, str) and any(
+            part.strip().lower() == "origin" for part in deliver.split(",")
+        ):
+            from cron.job_args import _origin_from_env, _resolve_cron_context_deliver
+
+            deliver = _resolve_cron_context_deliver(deliver)
+            origin = _origin_from_env(schedule)
         return create_job_with_scheduler_registration(
             prompt=prompt, schedule=schedule, name=name, repeat=repeat, deliver=deliver,
-            enabled_toolsets=enabled_toolsets)
+            enabled_toolsets=enabled_toolsets, origin=origin)
 
 
 def delivery_platforms(
