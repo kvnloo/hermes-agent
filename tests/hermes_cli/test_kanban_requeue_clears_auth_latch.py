@@ -183,3 +183,36 @@ def test_control_fresh_auth_failure_after_requeue_parks_again(kanban_home, clock
         _auth_fail(conn, tid)  # the kept counter may trip the breaker here; either way it parks
         assert kb.get_task(conn, tid).consecutive_failures == 2
         assert kbd.check_respawn_guard(conn, tid) == "blocker_auth"
+
+
+def test_ready_auth_failure_review_handoff_clears_latch(kanban_home, clock, dashboard):
+    """``request_review`` (dashboard PATCH status=review with a new assignee): the
+    reviewer is a fresh profile and must get its attempt; the counter stays."""
+    with kbc.connect() as conn:
+        tid = _ready_after_auth(conn, clock, "review handoff")
+    r = dashboard.patch(f"/api/plugins/kanban/tasks/{tid}",
+                        json={"status": "review", "assignee": "rev", "summary": "external implementation ready"})
+    assert r.status_code == 200, r.text
+    with kbc.connect() as conn:
+        task = kb.get_task(conn, tid)
+        assert (task.status, task.assignee, task.consecutive_failures) == ("review", "rev", 1)
+        assert task.last_failure_error is None
+        assert kbd.check_respawn_guard(conn, tid, lane="review") is None
+
+
+def test_dependency_unlink_requeues_auth_parked_todo(kanban_home, clock):
+    """A gated child keeps its stamp while ``todo``; the unlink that makes it
+    ``ready`` again is a requeue and clears it (counter kept)."""
+    with kbc.connect() as conn:
+        child = _ready_after_auth(conn, clock, "gated child")
+        parent = kb.create_task(conn, title="unfinished parent", assignee="a")
+        assert kb.link_tasks(conn, parent, child)
+        kb.recompute_ready(conn)
+        task = kb.get_task(conn, child)
+        assert (task.status, task.last_failure_error, task.consecutive_failures) == ("todo", AUTH_401, 1)
+        _tick(clock)
+        assert kb.unlink_tasks(conn, parent, child)
+        task = kb.get_task(conn, child)
+        assert (task.status, task.last_failure_error, task.consecutive_failures) == ("ready", None, 1)
+        assert kbd.check_respawn_guard(conn, child) is None
+

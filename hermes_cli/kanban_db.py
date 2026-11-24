@@ -3375,6 +3375,9 @@ def request_review(
                 return _ret(
                     False, "task is not in running/ready (or expected_run_id did not match the current run)",
                 )
+            # A review handoff is a fresh attempt for the reviewer: an auth stamp left by the
+            # implementer's failed spawn must not park the review lane (#121281).
+            _clear_requeued_failure_error(conn, task_id)
             if isinstance(metadata, dict):
                 staged_copies = _stage_completion_artifacts(
                     conn, task_id, metadata, now, uploaded_by="kanban_request_review",
