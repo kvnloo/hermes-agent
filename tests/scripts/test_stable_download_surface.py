@@ -308,6 +308,28 @@ def test_stable_promotion_fails_closed_when_dmg_missing_from_manifest_or_r2(
     r2_server.store[source_dmg_key] = saved
 
 
+def test_stable_promotion_rejects_oversize_dmg_before_moving_mac_feed(
+    tmp_path,
+    monkeypatch,
+    r2_server,  # health: allow F811 -- pytest injects the imported r2_server fixture by parameter name
+    https_origin,  # health: allow F811 -- pytest injects the imported https_origin fixture by parameter name
+):
+    monkeypatch.setattr(urllib.request, "urlopen", https_origin.opener)
+    previous, _ = _stage_stable_release(tmp_path, r2_server, https_origin, version="1.2.3")
+    artifacts.promote(previous, tmp_path / "previous", https_origin.base)
+    previous_feed = r2_server.store[STABLE_MAC_FEED_KEY][0]
+
+    candidate, dmg = _stage_stable_release(
+        tmp_path, r2_server, https_origin, version="1.2.4", epoch_offset=10
+    )
+    # Exercise the real CopyObject size guard without allocating a multi-GiB object.
+    monkeypatch.setattr(r2, "MAX_SINGLE_COPY_SIZE", len(dmg) - 1)
+
+    with pytest.raises(ValueError, match="CopyObject size"):
+        artifacts.promote(candidate, tmp_path / "oversize", https_origin.base)
+    assert r2_server.store[STABLE_MAC_FEED_KEY][0] == previous_feed
+
+
 @contextlib.contextmanager
 def _stable_channel_controller(tmp_path, monkeypatch):
     """Run publish_release against a real ChannelPublisher over an object server;
