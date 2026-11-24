@@ -1262,6 +1262,11 @@ def _execution_flag_findings(command: str):
         for start, _, word in _iter_shell_command_word_spans(segment):
             executable = _deobfuscate_shell_word_for_detection(word)
             tokens = _shell_segment_tokens(segment, start)
+            if tokens is None:
+                # `echo "n: $(python3 x.py)"`: the rest of the top-level segment closes the outer
+                # quote, so it never tokenizes. Bound the word to its own command (it ends at the
+                # substitution's `)`/backtick) before failing closed, as _eval_payloads does.
+                tokens = _shell_segment_tokens(_shell_command_segment(segment, start), 0)
             executable_name = os.path.basename(executable).lower()
             family = _interpreter_family(executable)
             if tokens is None:
