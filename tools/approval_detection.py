@@ -32,6 +32,7 @@ from tools.approval_home_fold import _rewrite_resolved_hermes_home, _rewrite_res
 from tools.approval_shell_tokens import _shell_tokens_with_spans
 from tools.approval_windows_hardline import whatif_preview_is_real, windows_hardline_patterns, windows_whatif_strict_patterns
 from tools.approval_applescript import OSASCRIPT_OPAQUE_DESCRIPTION, OSASCRIPT_RISKY_DESCRIPTION, classify_osascript
+from tools.approval_inline_code import screen_command_inline_code
 from tools.approval_quoted_newlines import _mask_quoted_newlines
 from tools.approval_variation_selectors import _EMOJI_RANGE, _HIDDEN_VARIATION_SELECTOR_RE
 from tools.approval_wmic import WmicShadowDeleteMatcher
@@ -1891,6 +1892,8 @@ def _iter_dangerous_descriptions(command: str, only: frozenset[str] | None = Non
     normalized = _normalize_command_for_detection(command)
     for description, _ in _execution_flag_findings(normalized):
         yield description
+    # What an inline program does needs its own grant, not just the script-execution class key.
+    yield from screen_command_inline_code(command, _iter_dangerous_descriptions)
     if _is_shell_token_spliced_gateway_lifecycle(command):
         yield _GATEWAY_LIFECYCLE_SPLICE_DESCRIPTION
     if _HIDDEN_VARIATION_SELECTOR_RE.search(command):

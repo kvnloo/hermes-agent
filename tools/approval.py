@@ -33,6 +33,7 @@ from tools.approval_detection import (
     detect_dangerous_command, detect_dangerous_keys, detect_hardline_command, hardline_scan_incomplete,
     SMART_MANUAL_ONLY_DESCRIPTIONS,
 )
+from tools.approval_inline_code import screen_inline_code
 from tools.approval_floors import (
     _command_matches_permanent_allowlist, _hardline_block_result, _matching_permanent_allowlist_entry, _match_user_deny_rule, _sudo_stdin_block_result,
     _user_deny_block_result,
@@ -1532,17 +1533,24 @@ def check_execute_code_guard(code: str, env_type: str, has_host_access: bool = F
     command = f"execute_code <<'PY'\n{code}\nPY"
 
     # Without this, "Approve session" / "Always" choices are stored but never
-    # consulted, so every execute_code call re-prompts (#39275).
+    # consulted, so every execute_code call re-prompts (#39275). The grant covers the script, not what it
+    # visibly does: each shell string it spawns and each destructive or fetch-and-run call still needs its
+    # own grant, as in a terminal command. Without the grant the whole-script prompt is unchanged.
+    pattern_keys = [pattern_key]
     if is_approved(session_key, pattern_key):
-        return _approved()
+        findings = [(key, key) for key in screen_inline_code("python", code, detect_dangerous_keys)]
+        pending = _pending_findings(findings, lambda key: is_approved(session_key, key))
+        if pending is None:
+            return _approved()
+        pattern_keys, description = pending
 
     # Smart mode: an APPROVE only suppresses the redundant whole-script prompt; the per-call terminal() guards still
     # run independently. The gateway renders the pending payload to Discord/Slack, so the script body is redacted for
     # display; the raw code is what gets assessed and run.
     from agent.redact import redact_approval_display
     return _human_decision(
-        _EXECUTE_CODE_GATE, command=command, description=description, pattern_key=pattern_key,
-        pattern_keys=[pattern_key], session_key=session_key,
+        _EXECUTE_CODE_GATE, command=command, description=description, pattern_key=pattern_keys[0],
+        pattern_keys=pattern_keys, session_key=session_key,
         approval_callback=approval_callback, is_cli=is_cli, is_gateway=is_gateway, is_ask=is_ask,
         smart=approval_mode == "smart",
         pending_body=lambda: f"**Code:**\n```python\n{redact_approval_display(code)}\n```",
