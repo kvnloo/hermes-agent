@@ -40,7 +40,7 @@ _ANCHOR_NOISE = frozenset({
 
 
 _ANCHOR_LINE_RE = re.compile(r"^(?P<label>[A-Za-z][^:\n]{0,39}): (?P<body>.+)$")
-_ANCHOR_ITEM_COUNT_RE = re.compile(r"^(?P<val>.+?)\(x(?P<n>\d+)\)$")
+_ANCHOR_ITEM_COUNT_RE = re.compile(r"^(?P<val>.+)\(x(?P<n>\d+)\)$")
 # Separator between entries inside one category line. A middle dot cannot occur inside an
 # identifier or an error string, so a rendered index parses back unambiguously (", " could not:
 # two adjacent error entries merged into one and were cut as a single over-long value).
@@ -111,7 +111,12 @@ def _build_anchor_index(turns: list[dict[str, Any]], *, carried_section: str = "
             continue
         # Genuine mention counts across every compacted region; ties go to the newest region.
         ranked = sorted(counts, key=lambda v: (-counts[v], -last_seen.get(v, -1)))[:cap]
-        line = f"{label}: " + _ANCHOR_ITEM_SEP.join(f"{v}(x{counts[v]})" if counts[v] > 1 else v for v in ranked)
+        # A literal count-shaped suffix needs an explicit (x1) so parsing the final
+        # suffix preserves the whole value, even when it only appeared once.
+        line = f"{label}: " + _ANCHOR_ITEM_SEP.join(
+            f"{v}(x{counts[v]})" if counts[v] > 1 or _ANCHOR_ITEM_COUNT_RE.fullmatch(v) else v
+            for v in ranked
+        )
         if used + len(line) > _LEAN_ANCHOR_BUDGET_CHARS:
             break
         sections.append(line)
