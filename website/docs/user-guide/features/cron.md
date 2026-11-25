@@ -282,7 +282,16 @@ tick fires it once the window opens, within the job's catch-up window; past that
 ordinary missed-run policy applies. A stale recurring occurrence is dropped and the job moves to
 its next slot. `hermes cron run` is never held.
 
-Set the fields in `cron/jobs.json` (a shipped profile keeps them) or through the Python job API
+Set them from the CLI; `""` clears one, and a bad value is refused with the same message the job
+API gives:
+
+```bash
+hermes cron create "0 9 * * *" "Plan the day" --window-class peak --stale-after 3600
+hermes cron edit <job_id> --window-class trough --stale-after 900
+hermes cron edit <job_id> --window-class ""   # back to firing whenever due
+```
+
+The fields also live in `cron/jobs.json` (a shipped profile keeps them) and in the Python job API
 (`create_job(..., window_class="peak", stale_after_s=3600)`).
 
 ## Editing jobs
