@@ -386,6 +386,78 @@ class TestExternalCronProviderStatus:
         assert "Scheduler is not ready" not in out
 
 
+class TestDecisionWindowFlags:
+    """`hermes cron create|edit --window-class/--stale-after` reach the job record through the
+    same lane as every other flag, and bad values are refused by cron.decision_window's own
+    normalizers (the CLI adds no validator of its own)."""
+
+    @staticmethod
+    def _run(*argv):
+        parser = argparse.ArgumentParser(prog="hermes")
+        build_cron_parser(parser.add_subparsers(dest="command"), cmd_cron=cron_command)
+        return cron_command(parser.parse_args(["cron", *argv]))
+
+    def test_create_stores_both_fields(self, tmp_cron_dir, capsys):
+        rc = self._run("create", "0 9 * * *", "Morning plan", "--window-class", "peak",
+                       "--stale-after", "3600")
+
+        assert rc == 0
+        job = list_jobs()[0]
+        assert job["window_class"] == "peak"
+        assert job["stale_after_s"] == 3600.0
+        out = capsys.readouterr().out
+        assert "Window: peak" in out
+        assert "Stale after: 3600s" in out
+
+    def test_edit_sets_both_and_empty_string_clears_one(self, tmp_cron_dir, capsys):
+        job = create_job(prompt="Evening review", schedule="every 1h")
+
+        assert self._run("edit", job["id"], "--window-class", "wind_down",
+                         "--stale-after", "900") == 0
+        edited = get_job(job["id"])
+        assert (edited["window_class"], edited["stale_after_s"]) == ("wind_down", 900.0)
+
+        assert self._run("edit", job["id"], "--window-class", "") == 0
+        cleared = get_job(job["id"])
+        assert cleared.get("window_class") is None
+        assert cleared["stale_after_s"] == 900.0, "clearing one knob leaves the other"
+
+        assert self._run("edit", job["id"], "--stale-after", "") == 0
+        assert get_job(job["id"]).get("stale_after_s") is None
+
+    @pytest.mark.parametrize("flags, message", [
+        (("--window-class", "noon"), "window_class must be one of"),
+        (("--stale-after", "soon"), "stale_after_s must be a number of seconds"),
+        (("--stale-after", "0"), "stale_after_s must be a positive number of seconds"),
+    ])
+    def test_create_rejects_bad_values_with_the_patch_normalizers(
+            self, tmp_cron_dir, capsys, flags, message):
+        rc = self._run("create", "every 1h", "Synthetic check", *flags)
+
+        assert rc == 1
+        assert message in capsys.readouterr().out
+        assert list_jobs() == []
+
+    def test_edit_rejects_bad_value_and_keeps_the_job(self, tmp_cron_dir, capsys):
+        job = create_job(prompt="Synthetic check", schedule="every 1h")
+
+        assert self._run("edit", job["id"], "--window-class", "lunch") == 1
+        assert "window_class must be one of" in capsys.readouterr().out
+        assert get_job(job["id"]).get("window_class") is None
+
+    def test_create_refuses_window_on_a_one_shot(self, tmp_cron_dir, capsys):
+        assert self._run("create", "in 30m", "One reminder", "--window-class", "peak") == 1
+        assert "needs a recurring schedule" in capsys.readouterr().out
+
+    def test_list_shows_both_fields(self, tmp_cron_dir, capsys):
+        create_job(prompt="Morning plan", schedule="0 9 * * *", window_class="trough",
+                   stale_after_s=1800)
+
+        cron_command(Namespace(cron_command="list", all=True, json=False))
+
+        out = capsys.readouterr().out
+        assert "trough" in out
+        assert "1800s" in out
 
 
 def test_cron_tick_invokes_scheduler_tick_verbose_and_headless(monkeypatch):

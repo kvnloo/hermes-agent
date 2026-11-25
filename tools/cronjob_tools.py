@@ -729,6 +729,7 @@ def _action_create(a: dict[str, Any]) -> str:
             reasoning_effort=a["reasoning_effort"], interpreter=a["interpreter"],
             timezone=_normalize_optional_job_value(a["timezone"]),
             grace_minutes=a["grace_minutes"],
+            window_class=a["window_class"], stale_after_s=a["stale_after_s"],
             pinned=bool(a["pinned"]),
             failure_deliver=_resolve_cron_context_deliver(_normalize_deliver_param(a["failure_deliver"])),
             catch_up=a["catch_up"], wrap_response=_wrap_response_override(a["wrap_response"]),
@@ -997,8 +998,17 @@ def _update_run_fields(job: dict[str, Any], a: dict[str, Any], updates: dict[str
     return None
 
 
+def _update_window_fields(job: dict[str, Any], a: dict[str, Any], updates: dict[str, Any]) -> Optional[str]:
+    """window_class / stale_after_s; '' clears. update_job normalizes and validates both."""
+    for key in ("window_class", "stale_after_s"):
+        if a[key] is not None:
+            updates[key] = a[key]
+    return None
+
+
 # Validation order is behavior (first failing field wins): keep this sequence.
-_UPDATE_STEPS = (_update_core_fields, _update_script_fields, _update_context_from, _update_run_fields)
+_UPDATE_STEPS = (_update_core_fields, _update_script_fields, _update_context_from, _update_run_fields,
+                 _update_window_fields)
 
 
 def _action_update(job: dict[str, Any], a: dict[str, Any]) -> str:
@@ -1090,7 +1100,10 @@ def cronjob(
     pinned: Optional[bool] = None,
     interpreter: Optional[str] = None,
     timezone: Optional[str] = None,
-    grace_minutes: Optional[int | str] = None) -> str:
+    grace_minutes: Optional[int | str] = None,
+    # CLI lane like reasoning_effort: not in CRONJOB_SCHEMA, so the model never sets them.
+    window_class: Optional[str] = None,
+    stale_after_s: Optional[float | str] = None) -> str:
     """Unified cron job management tool."""
     a = dict(locals())
     try:

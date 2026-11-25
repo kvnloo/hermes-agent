@@ -253,6 +253,8 @@ def _job_rows(job: dict[str, Any]) -> list[tuple[str, str]]:
         ("Grace", f"{job['grace_minutes']} min" if job.get("grace_minutes") is not None else ""),
         ("Workdir", job.get("workdir")),
         ("Python", job.get("interpreter")),
+        ("Window", job.get("window_class")),
+        ("Stale after", f"{job['stale_after_s']:g}s" if job.get("stale_after_s") is not None else ""),
         ("Last run", f"{job.get('last_run_at', '?')}  {_last_run_display(job)}"
          if job.get("last_status") else ""),
         ("Dispatch", _dispatch_display(job.get("last_dispatch"))),
@@ -785,7 +787,8 @@ _JOB_ARG_FIELDS = (("name", "name"), ("deliver", "deliver"), ("failure_deliver",
                    ("continuity", "continuity"), ("reasoning_effort", "reasoning_effort"),
                    ("interpreter", "interpreter"), ("timezone", "timezone"),
                    ("grace_minutes", "grace_minutes"), ("catch_up", "catch_up"),
-                   ("wrap_response", "wrap_response"))
+                   ("wrap_response", "wrap_response"), ("window_class", "window_class"),
+                   ("stale_after_s", "stale_after_s"))
 
 
 def _job_api_kwargs(args) -> dict[str, Any]:
@@ -801,7 +804,9 @@ _JOB_DETAIL_LINES = (
     ("continuity", "  Continuity: on (each run sees the previous run's output)"),
     ("timezone", "  Timezone: {} (schedule runs on this zone's wall clock)"),
     ("workdir", "  Workdir: {}"),
-    ("interpreter", "  Python: {}"))
+    ("interpreter", "  Python: {}"),
+    ("window_class", "  Window: {} (held while another decision window is open)"),
+    ("stale_after_s", "  Stale after: {:g}s (a later occurrence is dropped, not fired)"))
 
 
 def _print_job_details(job_data: dict[str, Any]) -> None:

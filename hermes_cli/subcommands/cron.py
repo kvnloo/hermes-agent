@@ -40,6 +40,19 @@ def _add_wrap_response(parser, *, allow_inherit: bool = False) -> None:
             help="Remove this job's override so it follows the global cron.wrap_response again.")
 
 
+def _add_window_flags(parser, *, clearable: bool = False) -> None:
+    # Values go to cron.decision_window's normalizers untouched: one validator, one message.
+    clear = " Pass empty string to clear." if clearable else ""
+    parser.add_argument(
+        "--window-class", dest="window_class", metavar="{peak,trough,wind_down,anytime}",
+        help="Decision window this recurring job fires in; outside it the due job is held "
+             "until a plugin's window provider reports it open. Omit to fire whenever due." + clear)
+    parser.add_argument(
+        "--stale-after", dest="stale_after_s", metavar="SECONDS",
+        help="Drop an occurrence instead of firing it once it is this many seconds past its "
+             "due instant (held or caught up). Recurring schedules only." + clear)
+
+
 def build_cron_parser(subparsers, *, cmd_cron: Callable) -> None:
     """Attach the ``cron`` subcommand (and its sub-actions) to ``subparsers``."""
     cron_parser = subparsers.add_parser(
@@ -121,6 +134,7 @@ def build_cron_parser(subparsers, *, cmd_cron: Callable) -> None:
         help="Catch-up window override in minutes (0-1440) for a cron schedule. "
             "Default: half the period, clamped to 2-120 minutes. 0 = never catch up "
             "(a missed occurrence is skipped, not run late).")
+    _add_window_flags(cron_create)
     cron_create.add_argument(
         "--continuity", dest="continuity", action="store_const", const=True, default=None,
         help="Each run wakes up with the job's own previous output injected "
@@ -199,6 +213,7 @@ def build_cron_parser(subparsers, *, cmd_cron: Callable) -> None:
     cron_edit.add_argument("--grace-minutes", dest="grace_minutes",
         help="Catch-up window override in minutes (0-1440). 0 = never catch up. "
             "Pass empty string to restore the computed window.")
+    _add_window_flags(cron_edit, clearable=True)
 
     # lifecycle actions
     cron_pause = cron_subparsers.add_parser("pause", help="Pause a scheduled job")
