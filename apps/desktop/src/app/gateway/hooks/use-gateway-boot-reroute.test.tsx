@@ -419,6 +419,38 @@ describe('a plugin re-routes one profile', () => {
     expect(FakeWebSocket.instances.filter(socket => socket.url === launcherWork.wsUrl)).toHaveLength(1)
   })
 
+  it('a retry does not replace a socket acquired without another move', async () => {
+    const world: RerouteWorld = { failLookups: 0, sandboxed: false }
+    const { launcherWork } = sharedThenSandboxed(world)
+    const launcherSockets = () => FakeWebSocket.instances.filter(socket => socket.url === launcherWork.wsUrl)
+
+    render(<Harness />)
+    await flushAsync()
+    await ensureGatewayProfile('work')
+    expect(isActivePrimary()).toBe(true)
+
+    world.sandboxed = true
+    world.failLookups = 1
+    const firstLookupFailed = new Promise<void>(resolve => (world.lookupFailed = resolve))
+
+    // Pin the first backoff to 150 ms of fake time; do not emit a second move.
+    vi.spyOn(Math, 'random').mockReturnValue(0.5)
+    act(() => connectionApplied?.({ profile: 'work' }))
+    await firstLookupFailed
+
+    // Re-selecting work opens its socket without invalidating the redial turn.
+    await ensureGatewayProfile('default')
+    const activate = ensureGatewayProfile('work')
+
+    await vi.advanceTimersByTimeAsync(1)
+    await activate
+    expect(isActivePrimary()).toBe(false)
+    expect(launcherSockets()).toHaveLength(1)
+
+    await vi.advanceTimersByTimeAsync(150)
+    expect(launcherSockets()).toHaveLength(1)
+  })
+
   it("a lookup that failed before the move does not hold the moved profile's next background request", async () => {
     const world = { failLookups: 0, sandboxed: false }
     const { launcherWork } = sharedThenSandboxed(world)
