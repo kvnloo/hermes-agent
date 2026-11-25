@@ -1601,13 +1601,12 @@ DEFAULT_CONFIG = {
     },
     # Approvals for dangerous commands.
     # mode: manual (always prompt) | smart (aux LLM auto-approves low-risk) | off (= --yolo)
-    # cron_mode / single_query_mode / unattended_mode: deny | approve — what to do when a
-    #   cron job, a -q session (HERMES_INTERACTIVE=1 but nobody to answer), or an unattended
-    #   platform (webhook, msgraph_webhook, api_server; no /approve channel) hits one.
-    #   deny blocks instantly so the agent finds another way instead of waiting out the
-    #   timeout and failing closed.
-    # timeout: seconds before an unanswered prompt fails closed (CLI and gateway). 60s
-    #   proved too tight for Telegram/Discord push notifications, hence 300.
+    # cron_mode / single_query_mode / unattended_mode: deny | approve — what a cron job, a -q session (nobody
+    #   to answer) or an unattended platform (webhook, msgraph_webhook, api_server; no /approve) does on one.
+    # unattended_escalation: wait | deny — an escalation in a delegate_task child or -q turn: wait keeps the
+    #   card (on the parent's chat) for timeout; deny hands the step back to the agent at once.
+    # timeout: seconds before an unanswered prompt fails closed (CLI and gateway); 60s was too tight
+    #   for Telegram/Discord push notifications, hence 300.
     "approvals": {
         # single_query_mode — what to do when a single-query (-q) session hits a dangerous command. -q runs
         # export HERMES_INTERACTIVE=1 (for interactive sudo prompts) but have NO user waiting to answer
@@ -1625,6 +1624,7 @@ DEFAULT_CONFIG = {
         "cron_mode": "deny",
         "single_query_mode": "deny",
         "unattended_mode": "deny",
+        "unattended_escalation": "wait",
         # Extra rules appended to the smart-approval guardian's SYSTEM prompt, e.g. "Always ESCALATE
         # commands touching /etc".
         "smart_policy": "",

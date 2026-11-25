@@ -1010,6 +1010,39 @@ def _smart_gate(spec: _GateSpec, command: str, description: str, pattern_key: st
     }, True
 
 
+_UNWATCHED_HANDOFF = (
+    "BLOCKED: {description} needs a human approval. No human is watching this session. Hand this "
+    "step off: kanban_block(kind=needs_input) with the exact command, or report it in your final "
+    "answer. Do not retry."
+)
+
+
+def _unwatched_escalation_denied() -> bool:
+    """``approvals.unattended_escalation: deny`` in a run nobody watches: a delegated child, whose
+    card would park on the parent's chat for ``approvals.timeout``, or a single-query turn."""
+    from agent.delegation_context import is_delegated_child_process_context
+    return (approval_context._get_unattended_escalation_mode() == "deny"
+            and (is_delegated_child_process_context() or _is_single_query_approval_context()))
+
+
+def _before_human(spec: _GateSpec, command: str, description: str, pattern_key: str,
+                  pattern_keys: list[str], session_key: str, *, smart: bool, is_cli: bool,
+                  is_gateway: bool, is_ask: bool) -> tuple[dict | None, bool]:
+    """Steps that can settle the gate before a human is asked -> ``(result, smart_denied_for_owner)``:
+    the guardian LLM, then the ``unattended_escalation`` hand-off. The guardian runs first, so
+    routine work is still approved; only a card that would wait on a chat nobody watches is skipped."""
+    smart_denied = False
+    if smart:
+        result, smart_denied = _smart_gate(spec, command, description, pattern_key, pattern_keys,
+                                           session_key, human_present=is_cli or is_gateway or is_ask)
+        if result is not None:
+            return result, smart_denied
+    if (is_gateway or is_ask) and _unwatched_escalation_denied():
+        return _denied(_UNWATCHED_HANDOFF.format(description=description), pattern_key=pattern_key,
+                       description=description, outcome="blocked", noun=spec.noun), smart_denied
+    return None, smart_denied
+
+
 def _human_decision(spec: _GateSpec, *, command: str, description: str,
                     pattern_key: str, pattern_keys: list[str],
                     session_key: str, approval_callback, is_cli: bool, is_gateway: bool,
@@ -1026,13 +1059,12 @@ def _human_decision(spec: _GateSpec, *, command: str, description: str,
     """
     from agent.redact import redact_approval_display
 
-    smart_denied = False
     manual_only = not SMART_MANUAL_ONLY_DESCRIPTIONS.isdisjoint(pattern_keys)
-    if smart and not manual_only:
-        result, smart_denied = _smart_gate(spec, command, description, pattern_key, pattern_keys,
-                                           session_key, human_present=is_cli or is_gateway or is_ask)
-        if result is not None:
-            return result
+    result, smart_denied = _before_human(spec, command, description, pattern_key, pattern_keys, session_key,
+                                         smart=smart and not manual_only, is_cli=is_cli,
+                                         is_gateway=is_gateway, is_ask=is_ask)
+    if result is not None:
+        return result
     pending_body = pending_body() if pending_body else None
     # A command the scanners could not read to the end is approved one run at a time: a session or
     # always grant on its key would wave through every later command that trips the scan budget.

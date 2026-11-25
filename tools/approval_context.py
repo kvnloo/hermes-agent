@@ -381,6 +381,12 @@ def _get_cron_approval_mode() -> str:
     return _binary_approval_mode("cron_mode")
 
 
+def _get_unattended_escalation_mode() -> str:
+    """Read ``approvals.unattended_escalation``: 'deny' or 'wait' (default; anything else is 'wait')."""
+    raw = _get_approval_config().get("unattended_escalation", "wait")
+    return "deny" if isinstance(raw, str) and raw.strip().lower() == "deny" else "wait"
+
+
 def _get_single_query_approval_mode() -> str:
     """Read the single-query (-q) approval mode from config. Returns 'deny' or 'approve'."""
     return _binary_approval_mode("single_query_mode")
